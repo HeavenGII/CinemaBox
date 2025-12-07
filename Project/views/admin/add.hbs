@@ -1,0 +1,81 @@
+<div class="page-container">
+    <h1 class="page-title">Добавить новый фильм</h1>
+
+    <div class="profile-content-area admin-form-area" >
+
+        {{#if error}}
+            <div class="alert alert-error">{{error}}</div>
+        {{/if}}
+        {{#if success}}
+            <div class="alert alert-success">{{success}}</div>
+        {{/if}}
+
+        <form action="/admin/add" method="POST" class="add-movie-form" enctype="multipart/form-data">
+            <h2>Основная информация о фильме</h2>
+
+            <div class="form-group">
+                <label for="title">Название фильма</label>
+                <input type="text" id="title" name="title" value="{{movieData.title}}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="originaltitle">Оригинальное название</label>
+                <input type="text" id="originaltitle" name="originaltitle" value="{{movieData.originaltitle}}" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="durationmin">Продолжительность (мин)</label>
+                    <input type="number" id="durationmin" name="durationmin" value="{{movieData.durationmin}}" required min="1">
+                </div>
+
+                <div class="form-group">
+                    <label for="releaseYear">Год выпуска</label>
+                    <input type="number" id="releaseYear" name="releaseYear" value="{{movieData.releaseYear}}" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="genre">Жанр</label>
+                    <input type="text" id="genre" name="genre" value="{{movieData.genre}}" required
+                           placeholder="Например: Фантастика, Триллер, Драма">
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Базовая цена билета (BYN)</label>
+                    <input type="number" id="price" name="price" value="{{movieData.price}}" step="0.01" min="0" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="directorName">Режиссер (Полное имя)</label>
+                <input type="text" id="directorName" name="directorName" value="{{movieData.directorName}}" required>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="posterFile">Постер (Обязателен)</label>
+                    <input type="file" id="posterFile" name="posterFile" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="trailerUrl">Ссылка на Трейлер</label>
+                    <input type="url" id="trailerUrl" name="trailerUrl" value="{{movieData.trailerUrl}}">
+                </div>
+            </div>
+
+            <div class="form-group description-full-width">
+                <label for="description">Описание / Сюжет</label>
+                <textarea id="description" name="description" rows="5" required>{{movieData.description}}</textarea>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="isActive" name="isActive" {{#if movieData.isActive}}checked{{/if}}>
+                <label for="isActive">Активен в прокате</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary profile-submit-btn">Сохранить фильм</button>
+        </form>
+    </div>
+</div>

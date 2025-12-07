@@ -1,0 +1,84 @@
+<!-- Герой-секция (Слайдер) -->
+<section class="hero-slider" {{#unless heroMovie.trailerYoutubeId}}style="background-image: url('{{heroMovie.posterUrl}}');"{{/unless}}>
+    {{#if heroMovie.trailerYoutubeId}}
+        <div class="video-background-container">
+            <iframe
+                    src="https://www.youtube.com/embed/{{heroMovie.trailerYoutubeId}}?autoplay=1&mute=1&loop=1&playlist={{heroMovie.trailerYoutubeId}}&controls=0&showinfo=0&rel=0&iv_load_policy=3&disablekb=1&modestbranding=1"
+            frameborder="0"
+            allow="autoplay; encrypted-media"
+            allowfullscreen
+            class="video-background-iframe"
+            ></iframe>
+        </div>
+    {{/if}}
+
+    <div class="hero-content">
+        <h1>{{heroMovie.title}}</h1>
+        <p>Рейтинг: {{heroMovie.rating}} ⭐ | Продолжительность: {{formatDuration heroMovie.durationmin}}</p>
+        <div class="hero-actions">
+            {{#if heroMovie.hasSessions}}
+                <a href="/movies/{{heroMovie.movield}}/select-time" class="btn btn-primary">Купить билет</a>
+            {{else}}
+                <span class="btn btn-primary btn-disabled">Нет сеансов</span>
+            {{/if}}
+            <a href="/movies/{{heroMovie.movield}}" class="btn btn-secondary">Информация</a>
+        </div>
+    </div>
+</section>
+
+<!-- Основной контент (Афиша) -->
+<main class="main-content">
+    {{#if searchTitle}}
+        <h2 class="search-results-title">
+            Результаты поиска по запросу: "{{searchTitle}}"
+        </h2>
+    {{else}}
+        <h2>🔥 Сейчас в прокате</h2>
+    {{/if}}
+
+
+    {{#if currentMovies.length}}
+
+        <div class="slider-container">
+            <button class="slider-arrow slider-prev" data-target="current-movies-slider">
+                &#10094; </button>
+
+            <div class="movies-grid slider-wrapper" id="current-movies-slider">
+
+                {{#each currentMovies}}
+                    <div class="movie-card">
+                        <a href="/movies/{{movield}}">
+                            <img src="{{posterurl}}" alt="Постер фильма {{title}}">
+                        </a>
+
+                        <span class="rating-badge">{{rating}} ⭐</span>
+
+                        <div class="card-info">
+                            <div>
+                                <h3>{{title}}</h3>
+                                <p class="genre">{{genre}} | {{formatDuration durationmin}}</p>
+                            </div>
+                            {{#if hasSessions}}
+                                <a href="/movies/{{movield}}/select-time" class="btn btn-card">Сеансы и билеты</a>
+                            {{else}}
+                                <span class="btn btn-card btn-disabled">Нет сеансов</span>
+                            {{/if}}
+                        </div>
+                    </div>
+                {{/each}}
+
+            </div>
+
+            <button class="slider-arrow slider-next" data-target="current-movies-slider">
+                &#10095; </button>
+        </div>
+        {{#unless searchTitle}}
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="/movies" class="btn btn-primary">Вся Афиша</a>
+            </div>
+        {{/unless}}
+
+    {{else}}
+    {{/if}}
+
+</main>

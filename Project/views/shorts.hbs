@@ -1,0 +1,528 @@
+<div id="shorts-data" style="display: none;" data-shorts='{{json shorts}}'></div>
+<div id="filter-data" data-movie-id="{{filterMovieId}}"></div>
+<div class="shorts-feed-container">
+    {{#if message}}
+        <div class="no-shorts-message">{{message}}</div>
+    {{else}}
+    {{!-- Элементы будут добавлены JavaScript динамически (только 3 шт.: пред., текущ., след.) --}}
+        <div id="dynamic-short-feed">
+        </div>
+    {{/if}}
+</div>
+
+<style>
+    /* Скрываем хедер и футер, чтобы страница была максимально похожа на Shorts */
+    body {
+        overflow: hidden;
+        background-color: #000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        /* Убираем стандартные отступы, если они есть */
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Контейнер для всех видео */
+    .shorts-feed-container {
+        width: 100vw;
+        height: 100vh;
+        overflow-y: scroll;
+        scroll-snap-type: y mandatory;
+        flex-grow: 1;
+        /* Убираем scrollbar, чтобы не мешал, если нужно */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .shorts-feed-container::-webkit-scrollbar {
+        display: none; /* Chrome, Safari and Opera */
+    }
+
+    /* Контейнер, в котором будут динамические элементы */
+    #dynamic-short-feed {
+        height: 100%;
+        width: 100%;
+    }
+
+    /* Каждый элемент занимает ровно весь экран */
+    .short-item {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+        scroll-snap-align: start;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #000;
+    }
+
+    /* Видео-контейнер для ограничения ширины */
+    .short-video-wrapper {
+        height: 100%;
+        max-width: 750px;
+        width: 100%;
+        position: relative;
+    }
+
+    /* Сам видеоэлемент */
+    .short-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background-color: #000;
+    }
+
+    /* Наложение с информацией */
+    .video-overlay {
+        position: absolute;
+        bottom: 100px;
+        max-width: 750px;
+        width: 100%;
+        padding: 20px 20px;
+        background: rgba(0,0,0,0.8);
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        box-sizing: border-box;
+    }
+
+    /* Добавляем отступ для текста, чтобы он не сливался с низом */
+    .video-details {
+        margin-bottom: 5px;
+        align-self: center;
+    }
+
+    .short-title {
+        font-size: 24px;
+        margin-bottom: 5px;
+        color: #fff;
+    }
+
+    .movie-link a {
+        color: #e50914;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    .movie-link a:hover {
+        text-decoration: underline;
+    }
+
+    .no-shorts-message {
+        color: #fff;
+        text-align: center;
+        padding-top: 50vh;
+        transform: translateY(-50%);
+        font-size: 20px;
+    }
+
+    /* Стили для иконки звука (верхний правый угол) */
+    .mute-toggle-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: background-color 0.2s;
+        z-index: 10;
+    }
+
+    .mute-toggle-btn:hover {
+        background: rgba(0, 0, 0, 0.8);
+    }
+
+    .mute-toggle-btn .icon {
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    /* Состояние mute */
+    .mute-toggle-btn.muted .icon {
+        content: '🔇';
+    }
+    .mute-toggle-btn.active .icon {
+        content: '🔊';
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const dataContainer = document.getElementById('shorts-data');
+        if (!dataContainer) return;
+
+        const filterDataContainer = document.getElementById('filter-data');
+        const isFiltered = !!filterDataContainer.getAttribute('data-movie-id');
+
+        const allShorts = JSON.parse(dataContainer.getAttribute('data-shorts'));
+        if (allShorts.length === 0) return;
+
+        const dynamicFeed = document.getElementById('dynamic-short-feed');
+        const feedContainer = document.querySelector('.shorts-feed-container');
+        const totalShorts = allShorts.length;
+        let currentIndex = 0;
+
+        // ГЛОБАЛЬНЫЙ ФЛАГ: включен ли звук глобально
+        let globalSoundEnabled = false;
+        const videoMuteStates = {};
+
+        // Обработка якоря
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            const initialIndex = allShorts.findIndex(s => String(s.shortid) === hash);
+            if (initialIndex !== -1) {
+                currentIndex = initialIndex;
+                console.log(`Якорь #${hash} найден, установлен индекс ${currentIndex}`);
+            }
+        }
+
+        // Инициализируем состояние mute для всех шортсов
+        allShorts.forEach(short => {
+            videoMuteStates[short.shortid] = true; // По умолчанию звук выключен
+        });
+
+        // --- УПРАВЛЕНИЕ ВОСПРОИЗВЕДЕНИЕМ ---
+        const tryPlayVideo = (video, shortId) => {
+            // Определяем состояние звука
+            let shouldBeMuted;
+
+            if (globalSoundEnabled) {
+                // Если глобально звук включен, проверяем индивидуальное состояние
+                shouldBeMuted = videoMuteStates[shortId] === true;
+            } else {
+                // Если глобально выключен, звук всегда выключен
+                shouldBeMuted = true;
+            }
+
+            video.muted = shouldBeMuted;
+
+            const muteBtn = video.closest('.short-item')?.querySelector('.mute-toggle-btn');
+            if (muteBtn) {
+                const iconSpan = muteBtn.querySelector('.icon');
+                if (video.muted) {
+                    iconSpan.textContent = '🔇';
+                    muteBtn.classList.remove('active');
+                    muteBtn.title = 'Включить звук';
+                } else {
+                    iconSpan.textContent = '🔊';
+                    muteBtn.classList.add('active');
+                    muteBtn.title = 'Выключить звук';
+                }
+            }
+
+            if (video.paused) {
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        if (error.name === "NotAllowedError" || error.name === "AbortError") {
+                            video.muted = true;
+                            video.play().catch(e => { });
+                        }
+                    });
+                }
+            }
+        };
+
+        // --- ГЕНЕРАЦИЯ HTML ---
+        const createShortItem = (short, index) => {
+            if (!short) return null;
+
+            const shortItem = document.createElement('div');
+            shortItem.className = 'short-item';
+            shortItem.setAttribute('data-short-id', short.shortid);
+            shortItem.setAttribute('data-index', index);
+
+            // Определяем начальное состояние звука
+            let isInitiallyMuted;
+            if (globalSoundEnabled) {
+                // Если глобально включен, берем индивидуальное состояние
+                isInitiallyMuted = videoMuteStates[short.shortid] === true;
+            } else {
+                // Если глобально выключен, звук всегда выключен
+                isInitiallyMuted = true;
+            }
+
+            const muteIcon = isInitiallyMuted ? '🔇' : '🔊';
+            const muteClass = isInitiallyMuted ? '' : 'active';
+            const movieLinkUrl = `/movies/${short.movieid}`;
+
+            shortItem.innerHTML = `
+            <div class="short-video-wrapper">
+                <video
+                    class="short-video"
+                    id="video-${short.shortid}"
+                    src="${short.videopath}"
+                    ${index === currentIndex ? 'autoplay' : ''}
+                    loop
+                    playsinline
+                    ${isInitiallyMuted ? 'muted' : ''}
+                ></video>
+
+                <button class="mute-toggle-btn ${muteClass}" data-video-id="video-${short.shortid}">
+                    <span class="icon">${muteIcon}</span>
+                </button>
+            </div>
+
+            <div class="video-overlay">
+                <div class="video-details">
+                    <h2 class="short-title">${short.short_title}</h2>
+                    <p class="movie-link">К фильму: <a href="${movieLinkUrl}">${short.movie_title}</a></p>
+                </div>
+            </div>
+        `;
+
+            const muteButton = shortItem.querySelector('.mute-toggle-btn');
+            const video = shortItem.querySelector('.short-video');
+
+            // Обработчик кнопки звука
+            muteButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+
+                // Запоминаем старое состояние ДО изменения
+                const wasMuted = video.muted;
+
+                // Меняем состояние для этого видео
+                videoMuteStates[short.shortid] = !video.muted;
+                video.muted = !video.muted;
+
+                // 🔴 ИСПРАВЛЕНИЕ: Если ВКЛЮЧАЕМ звук (был muted, стал unmuted)
+                if (wasMuted && !video.muted) {
+                    // Устанавливаем глобальный флаг
+                    globalSoundEnabled = true;
+
+                    // 🔴 ИСПРАВЛЕНИЕ: Включаем звук для ВСЕХ видео в массиве allShorts
+                    // (кроме тех, где звук был явно выключен пользователем ранее)
+                    allShorts.forEach(s => {
+                        // Если для этого видео еще не было явного выключения звука
+                        if (videoMuteStates[s.shortid] !== false) {
+                            videoMuteStates[s.shortid] = false; // Включаем звук
+                        }
+                    });
+
+                    // Обновляем ВСЕ текущие видео в DOM
+                    dynamicFeed.querySelectorAll('.short-video').forEach(vid => {
+                        const vidId = vid.id.replace('video-', '');
+                        // Находим соответствующий шортс
+                        const currentShort = allShorts.find(s =>
+                                s.shortid && String(s.shortid) === vidId
+                        );
+
+                        if (currentShort) {
+                            // Устанавливаем звук в соответствии с обновленным состоянием
+                            vid.muted = videoMuteStates[currentShort.shortid] === true;
+
+                            const vidMuteBtn = vid.closest('.short-item')?.querySelector('.mute-toggle-btn');
+                            if (vidMuteBtn) {
+                                const vidIconSpan = vidMuteBtn.querySelector('.icon');
+                                if (vid.muted) {
+                                    vidIconSpan.textContent = '🔇';
+                                    vidMuteBtn.classList.remove('active');
+                                } else {
+                                    vidIconSpan.textContent = '🔊';
+                                    vidMuteBtn.classList.add('active');
+                                }
+                            }
+                        }
+                    });
+                }
+                // 🔴 ИСПРАВЛЕНИЕ: Если ВЫКЛЮЧАЕМ звук
+                else if (!wasMuted && video.muted) {
+                    // Выключаем звук только у этого видео
+                    // Глобальный флаг не меняем, чтобы другие видео остались со звуком
+                }
+
+                // Обновляем иконку текущей кнопки
+                const iconSpan = muteButton.querySelector('.icon');
+                if (video.muted) {
+                    iconSpan.textContent = '🔇';
+                    muteButton.classList.remove('active');
+                    muteButton.title = 'Включить звук';
+                } else {
+                    iconSpan.textContent = '🔊';
+                    muteButton.classList.add('active');
+                    muteButton.title = 'Выключить звук';
+                }
+
+                // Пробуем воспроизвести, если видео на паузе
+                if (video.paused) {
+                    video.play().catch(e => {});
+                }
+            });
+
+            // Клик на видео только для паузы/воспроизведения
+            video.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            });
+
+            return shortItem;
+        };
+
+        // --- ЛОГИКА ЗАГРУЗКИ ---
+        const loadShorts = (scrollToCurrent = true) => {
+            dynamicFeed.querySelectorAll('.short-item').forEach(item => {
+                const video = item.querySelector('.short-video');
+                if (video) {
+                    video.pause();
+                    if (isFiltered) {
+                        video.removeAttribute('src');
+                        video.load();
+                    }
+                }
+            });
+
+            dynamicFeed.innerHTML = '';
+
+            let prevIndex, nextIndex;
+
+            if (isFiltered) {
+                prevIndex = currentIndex > 0 ? currentIndex - 1 : null;
+                nextIndex = currentIndex < totalShorts - 1 ? currentIndex + 1 : null;
+            } else {
+                prevIndex = (currentIndex - 1 + totalShorts) % totalShorts;
+                nextIndex = (currentIndex + 1) % totalShorts;
+            }
+
+            const indicesToLoad = [prevIndex, currentIndex, nextIndex].filter(i => i !== null);
+
+            // Загружаем элементы в правильном порядке для scroll-snap
+            indicesToLoad.forEach(index => {
+                const shortData = allShorts[index];
+                const item = createShortItem(shortData, index);
+                if (item) {
+                    dynamicFeed.appendChild(item);
+                }
+            });
+
+            // Позиционируем скролл
+            if (scrollToCurrent) {
+                window.requestAnimationFrame(() => {
+                    const itemHeight = feedContainer.clientHeight;
+                    let targetScrollTop = itemHeight; // По умолчанию центрируем
+
+                    if (isFiltered) {
+                        if (currentIndex === 0) {
+                            targetScrollTop = 0;
+                        } else if (currentIndex === totalShorts - 1) {
+                            const loadedCount = indicesToLoad.length;
+                            targetScrollTop = itemHeight * (loadedCount - 1);
+                        } else {
+                            targetScrollTop = itemHeight;
+                        }
+                    }
+
+                    feedContainer.scrollTop = targetScrollTop;
+                });
+            }
+
+            const currentVideo = dynamicFeed.querySelector(`.short-item[data-index="${currentIndex}"] .short-video`);
+            if (currentVideo) {
+                tryPlayVideo(currentVideo, allShorts[currentIndex].shortid);
+            }
+
+            // Обновляем URL с якорем
+            const currentShort = allShorts[currentIndex];
+            if (currentShort) {
+                const searchParams = new URLSearchParams(window.location.search);
+                const newUrl = `${window.location.pathname}?${searchParams.toString()}#${currentShort.shortid}`;
+                window.history.replaceState(null, '', newUrl);
+            }
+        };
+
+        // --- ОТСЛЕЖИВАНИЕ СКРОЛЛА ---
+        let isScrolling = false;
+        let scrollTimeout;
+
+        feedContainer.addEventListener('scroll', () => {
+            if (!isScrolling) { isScrolling = true; }
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+
+            scrollTimeout = setTimeout(() => {
+                const scrollTop = feedContainer.scrollTop;
+                const itemHeight = feedContainer.clientHeight;
+
+                let currentElementIndex = Math.round(scrollTop / itemHeight);
+
+                // Получаем все загруженные элементы
+                const loadedItems = Array.from(dynamicFeed.querySelectorAll('.short-item'));
+                if (loadedItems.length === 0) {
+                    isScrolling = false;
+                    return;
+                }
+
+                // Определяем реальный индекс элемента, который сейчас в центре
+                let newIndex = currentIndex;
+
+                if (currentElementIndex >= 0 && currentElementIndex < loadedItems.length) {
+                    const currentElement = loadedItems[currentElementIndex];
+                    const elementIndex = parseInt(currentElement.getAttribute('data-index'));
+
+                    // Если элемент изменился
+                    if (elementIndex !== currentIndex) {
+                        newIndex = elementIndex;
+                    }
+                }
+
+                if (newIndex !== currentIndex) {
+                    currentIndex = newIndex;
+                    loadShorts(false);
+
+                    window.requestAnimationFrame(() => {
+                        const itemHeight = feedContainer.clientHeight;
+                        const loadedItems = Array.from(dynamicFeed.querySelectorAll('.short-item'));
+                        const currentElementIndex = loadedItems.findIndex(item =>
+                                parseInt(item.getAttribute('data-index')) === currentIndex
+                        );
+
+                        if (currentElementIndex >= 0) {
+                            feedContainer.scrollTop = itemHeight * currentElementIndex;
+                        }
+                    });
+                }
+
+                isScrolling = false;
+            }, 100);
+        });
+
+        // --- ИНИЦИАЛИЗАЦИЯ ---
+        loadShorts(true);
+
+        // --- Обработка клавиш ---
+        document.addEventListener('keydown', (e) => {
+            let newIndex = currentIndex;
+
+            if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (isFiltered) {
+                    if (currentIndex > 0) { newIndex = currentIndex - 1; }
+                } else {
+                    newIndex = (currentIndex - 1 + totalShorts) % totalShorts;
+                }
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                if (isFiltered) {
+                    if (currentIndex < totalShorts - 1) { newIndex = currentIndex + 1; }
+                } else {
+                    newIndex = (currentIndex + 1) % totalShorts;
+                }
+            }
+
+            if (newIndex !== currentIndex) {
+                currentIndex = newIndex;
+                loadShorts(true);
+            }
+        });
+    });
+</script>

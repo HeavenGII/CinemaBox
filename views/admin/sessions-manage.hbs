@@ -1,0 +1,166 @@
+<div class="page-container main-wrapper">
+    <h1>🗓️ Управление сеансами</h1>
+
+    {{#if error}}
+        <div class="alert alert-error">{{error}}</div>
+    {{/if}}
+    {{#if success}}
+        <div class="alert alert-success">{{success}}</div>
+    {{/if}}
+
+    <section class="admin-form-block">
+        <h2>➕ Добавить новый сеанс</h2>
+        <form action="/admin/sessions" method="POST" class="form-container">
+
+            <div class="form-group">
+                <label for="movieId">Фильм:</label>
+                <select id="movieId" name="movieId" required>
+                    <option value="">-- Выберите фильм --</option>
+                    {{#each movies}}
+                        <option value="{{movieid}}"
+                                {{#ifeq movieid ../formData.movieId}}selected{{/ifeq}}
+                        >
+                            {{title}} ({{price}} ₽)
+                        </option>
+                    {{/each}}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="hallId">Зал:</label>
+                <select id="hallId" name="hallId" required>
+                    <option value="">-- Выберите зал --</option>
+                    {{#each halls}}
+                        <option value="{{hallid}}"
+                                {{#ifeq hallid ../formData.hallId}}selected{{/ifeq}}
+                        >
+                            {{name}} ({{rowscount}} рядов, {{seatsperrow}} мест)
+                        </option>
+                    {{/each}}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="startTime">Дата и время начала:</label>
+                <input type="datetime-local"
+                       id="startTime"
+                       name="startTime"
+                       value="{{formData.startTime}}"
+                       min="{{formatDate (now) 'YYYY-MM-DDTHH:MM'}}"
+                       required>
+                <small class="form-text-muted">Время должно быть в формате YYYY-MM-DDTHH:MM</small>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg">Создать сеанс</button>
+        </form>
+    </section>
+
+    <hr class="divider">
+
+    <section class="screenings-list-block">
+        <h2>Список предстоящих сеансов</h2>
+        <div class="actions">
+            <a href="/admin/sessions/report" class="btn btn-secondary">
+                📊 Скачать полный отчет (CSV)
+            </a>
+        </div>
+        {{#if upcomingScreenings.length}}
+            <table class="admin-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Фильм</th>
+                    <th>Зал</th>
+                    <th>Время начала</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+                </thead>
+                <tbody>
+                {{#each upcomingScreenings}}
+                    <tr class="{{#if iscancelled}}cancelled-row{{/if}}">
+                        <td>{{screeningid}}</td>
+                        <td>{{movietitle}}</td>
+                        <td>{{hallname}}</td>
+                        <td>{{formatDate starttime 'D MMM YYYY в HH:mm'}}</td>
+                        <td>
+                            {{#if iscancelled}}
+                                <span class="status-cancelled">Отменен</span>
+                            {{else}}
+                                <span class="status-active">Активен</span>
+                            {{/if}}
+                        </td>
+                        <td>
+                            {{#unless iscancelled}}
+                                <form action="/admin/sessions/{{screeningid}}/cancel" method="POST" style="display:inline;" onsubmit="return confirm('Отменить сеанс? Это действие отменит все брони.');">
+                                    <button type="submit" class="btn-text-link btn-danger-link">Отменить</button>
+                                </form>
+                            {{/unless}}
+                        </td>
+                    </tr>
+                {{/each}}
+                </tbody>
+            </table>
+        {{else}}
+            <p>Предстоящих сеансов не найдено.</p>
+        {{/if}}
+    </section>
+
+</div>
+<style>
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .section-header h2 {
+        margin: 0;
+    }
+
+    .actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.3s;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+        color: white;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const startTimeInput = document.getElementById('startTime');
+
+        // Если поле пустое (т.е. нет данных из formData)
+        if (!startTimeInput.value) {
+            const now = new Date();
+            // Смещение времени на ближайшие 15 минут
+            now.setMinutes(now.getMinutes() - (now.getMinutes() % 15) + 15);
+
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+
+            const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            startTimeInput.value = formattedDateTime;
+        }
+    });
+</script>

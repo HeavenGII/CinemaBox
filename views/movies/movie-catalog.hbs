@@ -1,0 +1,208 @@
+<div class="page-container">
+    <h1 class="page-title">{{title}}</h1>
+
+    <div class="movie-grid">
+        {{#each movies}}
+            <div class="movie-card {{#unless this.isactive}}movie-card-inactive{{/unless}}">
+                <a href="/movies/{{this.movieid}}" class="card-link-content">
+                    <div class="poster-container">
+                        <img src="{{this.posterurl}}" alt="{{this.title}}" class="movie-poster">
+                        {{#if this.agerestriction}}
+                            <div class="age-restriction-badge-small age-{{this.agerestriction}}">
+                                {{this.agerestriction}}+
+                            </div>
+                        {{/if}}
+                    </div>
+                    <div class="movie-info">
+                        <h3 class="movie-title">{{this.title}}</h3>
+
+                        {{#unless this.isactive}}
+                            <span class="status-badge badge-inactive">Скоро</span>
+                        {{else}}
+                            <span class="status-badge badge-active">В прокате</span>
+                        {{/unless}}
+
+                        <p class="movie-meta">
+                            <span>{{this.genre}}</span> |
+                            <span>{{this.durationmin}} мин.</span>
+                        </p>
+                        <div class="movie-rating">
+                            Рейтинг:
+                            {{#if this.ratingavg}}
+                                <span style="color: #f5c518;">{{this.ratingavg}}</span>
+                            {{else}}
+                                Нет
+                            {{/if}}
+                        </div>
+                    </div>
+                </a>
+                <div class="card-button-wrapper">
+                    {{#if this.isactive}}
+                        {{#if this.hassessions}}
+                            <a href="/movies/{{this.movieid}}/select-time" class="btn btn-secondary">Купить билет ({{this.price}} BYN)</a>
+                        {{else}}
+                            <button class="btn btn-secondary" disabled>
+                                Нет сеансов
+                            </button>
+                        {{/if}}
+                    {{else}}
+                        <button class="btn btn-secondary" disabled>
+                            Скоро в прокате
+                        </button>
+                    {{/if}}
+                </div>
+            </div>
+        {{else}}
+            <div class="empty-list">
+                <p>Каталог фильмов пуст.</p>
+            </div>
+        {{/each}}
+    </div>
+</div>
+
+<style>
+    /* Стили для страницы Каталога (дополнительные стили для статусов) */
+    .page-container {
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .page-title {
+        text-align: center;
+        margin-bottom: 40px;
+        color: #e50914;
+    }
+    .movie-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 30px;
+    }
+
+    /* 1. КАРТОЧКА: Главный Flex-контейнер (колонна) */
+    .movie-card {
+        position: relative;
+        background: #1a1a1a;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        transition: transform 0.2s, opacity 0.3s;
+        display: flex;
+        flex-direction: column; /* Элементы идут сверху вниз: ссылка, затем кнопка */
+    }
+
+    .movie-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+    }
+    .movie-card-inactive {
+        opacity: 0.7;
+        filter: grayscale(40%);
+    }
+    .movie-card-inactive:hover {
+        transform: none;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        cursor: default;
+    }
+
+    /* 2. ССЫЛОЧНЫЙ КОНТЕНТ (а): Растягивается, чтобы прижать кнопку вниз */
+    .movie-card .card-link-content {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        flex-grow: 1; /* РАСТЯГИВАЕМЫЙ ЭЛЕМЕНТ */
+        display: flex;
+        flex-direction: column; /* Постер и инфо внутри ссылки идут колонной */
+        justify-content: flex-start;
+    }
+
+    .movie-poster {
+        width: 100%;
+        height: 350px;
+        object-fit: cover;
+        display: block;
+        flex-shrink: 0;
+    }
+
+    /* 3. БЛОК ИНФОРМАЦИИ: Растягивается, чтобы заполнить место */
+    .movie-info {
+        padding: 15px;
+        color: #f0f0f0;
+        flex-grow: 1; /* РАСТЯГИВАЕТСЯ */
+    }
+
+    .movie-title {
+        font-size: 1.2em;
+        margin-top: 0;
+        margin-bottom: 5px;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex-shrink: 0;
+    }
+    .movie-meta {
+        font-size: 0.9em;
+        color: #aaa;
+        margin-bottom: 10px;
+    }
+    .movie-rating {
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    .status-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+        z-index: 10;
+    }
+    .badge-active {
+        background-color: #28a745; /* Зеленый */
+        color: white;
+    }
+    .badge-inactive {
+        background-color: #ffc107; /* Желтый */
+        color: #333;
+    }
+
+    /* 4. ОБЕРТКА КНОПКИ: Обеспечивает отступы и не сжимается */
+    .card-button-wrapper {
+        padding: 0 15px 15px 15px;
+        flex-shrink: 0;
+    }
+
+    /* 5. КНОПКА: Стилизация */
+    .btn-secondary {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        text-align: center;
+        background-color: #e50914;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: background-color 0.2s;
+        flex-shrink: 0;
+    }
+
+    .btn-secondary:hover:not([disabled]) {
+        background-color: #ff0000;
+    }
+    .btn-secondary[disabled] {
+        background-color: #4a4a4a;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    .empty-list {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 50px;
+        font-size: 1.2em;
+        color: #aaa;
+    }
+</style>

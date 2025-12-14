@@ -1,0 +1,32 @@
+<div class="auth-page">
+    <div class="auth-card">
+        <h2>Авторизация</h2>
+
+        {{#if error}}
+            <p class="error-message">{{error}}</p>
+        {{/if}}
+
+        <form action="/auth/login" method="POST">
+            <div class="input-group">
+                <label for="email">Email</label>
+                {{!-- Для предзаполнения можно использовать flash-сообщение registerData --}}
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <div style="text-align: right; margin-bottom: 20px; margin-top: -10px;">
+                <a href="/auth/forgot-password" style="color: #e50914; font-size: 14px; text-decoration: none;">
+                    Забыли пароль?
+                </a>
+            </div>
+
+            {{!-- CSRF-токен обязателен (раскомментируйте, если используете csurf) --}}
+            <button type="submit" class="btn btn-primary full-width">Войти</button>
+            <p class="switch-auth">Ещё нет аккаунта? <a href="/auth/register">Зарегистрироваться</a></p>
+        </form>
+    </div>
+</div>

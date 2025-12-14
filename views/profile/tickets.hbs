@@ -1,0 +1,84 @@
+<div class="page-container profile-page">
+    <h1 class="page-title">{{title}}</h1>
+
+    {{>profileNav}}
+
+    <div class="profile-content-area">
+        {{#if error}}
+            <div class="alert alert-error">{{error}}</div>
+        {{/if}}
+        {{#if success}}
+            <div class="alert alert-success">{{success}}</div>
+        {{/if}}
+
+        <h2>Все ваши билеты</h2>
+
+        {{#if tickets.length}}
+            <div class="tickets-list">
+                {{#each tickets}}
+                    <div class="ticket-card ticket-status-{{status}}">
+                        <div class="ticket-details">
+                            <h3>{{movie_title}}</h3>
+                            <p><strong>Сеанс:</strong> {{sessionDate}}</p>
+                            <p><strong>Зал:</strong> {{hall_name}}</p>
+                            <p><strong>Место:</strong> Ряд {{rownum}}, Место {{seatnum}}</p>
+                            <p><strong>Цена:</strong> {{totalprice}} BYN</p>
+
+                            <!-- Статус билета -->
+                            <span class="status-badge status-{{status}}">
+                                {{#ifeq status 'Оплачен'}}
+                                    {{#if isFuture}}Активен{{else}}Просмотрен{{/if}}
+                                {{else}}
+                                    {{status}}
+                                {{/ifeq}}
+                            </span>
+
+                            <!-- Информация о возврате -->
+                            {{#ifeq status 'Возвращен'}}
+                                <div class="refund-info">
+                                    <p><strong>Причина возврата:</strong> {{refund_reason}}</p>
+                                    {{#if refundDate}}
+                                        <p><strong>Дата возврата:</strong> {{refundDate}}</p>
+                                    {{/if}}
+                                </div>
+                            {{/ifeq}}
+                        </div>
+
+                        <div class="ticket-actions vertical-actions">
+                            <!-- Кнопка деталей -->
+                            <a href="/profile/ticket/{{ticketid}}" class="btn btn-primary view-btn">
+                                Посмотреть детали
+                            </a>
+
+                            <!-- Кнопка отмены только для активных будущих билетов -->
+                            {{#if isCancellable}}
+                                <form action="/profile/ticket/{{ticketid}}/cancel" method="POST">
+                                    <button type="submit" class="btn btn-secondary cancel-btn"
+                                            onclick="return confirm('Вы уверены, что хотите отменить этот билет? Возврат может занять некоторое время.')">
+                                        Отменить билет
+                                    </button>
+                                </form>
+                            {{else}}
+                                <!-- Сообщение о невозможности отмены -->
+                                <div class="action-info">
+                                    {{#ifeq status 'Возвращен'}}
+                                        <span class="info-text">Возврат выполнен</span>
+                                    {{else ifeq status 'Использован'}}
+                                        <span class="info-text">Билет использован</span>
+                                    {{else ifeq isFuture false}}
+                                        <span class="info-text">Сеанс завершён</span>
+                                    {{else}}
+                                        <span class="info-text">Отмена недоступна</span>
+                                    {{/ifeq}}
+                                </div>
+                            {{/if}}
+                        </div>
+                    </div>
+                {{/each}}
+            </div>
+        {{else}}
+            <p class="no-tickets">У вас пока нет билетов. Время выбрать фильм!</p>
+            <a href="/" class="btn btn-primary">Посмотреть Афишу</a>
+        {{/if}}
+    </div>
+</div>

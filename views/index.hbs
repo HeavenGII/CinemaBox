@@ -43,7 +43,7 @@
 
             <div class="movies-grid slider-wrapper" id="current-movies-slider">
                 {{#each currentMovies}}
-                    {{#if isactive}}
+                    {{#ifeq isactive 'true'}}
                         <div class="movie-card">
                             <a href="/movies/{{movield}}">
                                 <div class="poster-container">
@@ -76,7 +76,7 @@
                                 {{/if}}
                             </div>
                         </div>
-                    {{/if}}
+                    {{/ifeq}}
                 {{/each}}
             </div>
 

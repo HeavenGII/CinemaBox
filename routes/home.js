@@ -4,7 +4,6 @@ const router = Router()
 
 function getYouTubeId(url) {
     if (!url) return null;
-    // Регулярное выражение для захвата ID из форматов watch?v=, youtu.be/, embed/ и т.д.
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
@@ -15,11 +14,11 @@ function validateYear(year) {
     const parsed = parseInt(year, 10);
     if (isNaN(parsed)) return null;
 
-    const minYear = 1895; // Год изобретения кино
-    const maxYear = new Date().getFullYear() + 5; // С запасом на будущее
+    const minYear = 1895;
+    const maxYear = new Date().getFullYear() + 5;
 
     if (parsed < minYear || parsed > maxYear) {
-        return null; // Недопустимый год
+        return null;
     }
     return parsed;
 }
@@ -29,20 +28,19 @@ function validateRating(rating) {
     const parsed = parseFloat(rating);
     if (isNaN(parsed)) return null;
 
-    // Рейтинг должен быть в диапазоне от 0.0 до 10.0
+
     if (parsed < 0.0 || parsed > 10.0) {
-        return null; // Недопустимый рейтинг
+        return null;
     }
-    // Округляем до одного знака после запятой для точности
+
     return parseFloat(parsed.toFixed(1));
 }
 
 router.get('/', async (req, res) => {
-    // 1. Получаем параметры из запроса
     const rawSearchTitle = req.query.searchTitle;
     const searchTitle = (rawSearchTitle && rawSearchTitle.trim().length > 0) ? rawSearchTitle.trim() : null;
 
-    // Параметры фильтрации
+
     const filterYear = validateYear(req.query.year);
     const filterGenre = req.query.genre && req.query.genre.trim() !== '' ? req.query.genre.trim() : null;
     const filterMinRating = validateRating(req.query.minRating);
@@ -58,7 +56,6 @@ router.get('/', async (req, res) => {
     let heroMovie = null;
     let allGenres = [];
 
-    // Подзапрос для ближайшего сеанса
     const firstScreeningIdSelect = `
         (
             SELECT s.screeningid
@@ -81,7 +78,6 @@ router.get('/', async (req, res) => {
         `);
         allGenres = genresResult.rows.map(r => r.clean_genre);
 
-        // --- 3. Строим основной запрос для фильмов ---
         let baseQuery = `
             SELECT
                 m.movieid,
@@ -95,47 +91,40 @@ router.get('/', async (req, res) => {
                 m.agerestriction,
                 ${firstScreeningIdSelect}
             FROM movies m
+            WHERE m.isactive = true
         `;
 
-        // А. Фильтр по названию
         if (searchTitle) {
             whereConditions.push(`m.title ILIKE $${paramCounter}`);
             queryParams.push(`%${searchTitle}%`);
             paramCounter++;
         }
 
-        // Б. Фильтр по году
         if (filterYear) {
             whereConditions.push(`m.releaseyear = $${paramCounter}`);
             queryParams.push(filterYear);
             paramCounter++;
         }
 
-        // В. Фильтр по жанру (ИСПРАВЛЕНО: ищем вхождение)
         if (filterGenre) {
-            // Ищем 'драма' внутри строки 'боевик, драма, спорт'
             whereConditions.push(`m.genre ILIKE $${paramCounter}`);
             queryParams.push(`%${filterGenre}%`);
             paramCounter++;
         }
 
-        // Г. Фильтр по рейтингу
         if (filterMinRating) {
             whereConditions.push(`m.ratingavg >= $${paramCounter}`);
             queryParams.push(filterMinRating);
             paramCounter++;
         }
 
-        // Если есть условия, добавляем WHERE
         if (whereConditions.length > 0) {
             baseQuery += ' WHERE ' + whereConditions.join(' AND ');
         }
 
-        // Сортировка
         if (isFilterApplied) {
             baseQuery += ` ORDER BY m.ratingavg DESC, m.releaseyear DESC`;
         } else {
-            // По умолчанию топ-10
             baseQuery += ` ORDER BY m.ratingavg DESC, m.releaseyear DESC LIMIT 10`;
         }
 
@@ -145,7 +134,7 @@ router.get('/', async (req, res) => {
             movield: m.movieid,
             title: m.title,
             posterurl: m.posterurl,
-            genre: m.genre, // Здесь остается строка "боевик, драма", это нормально для отображения
+            genre: m.genre,
             durationmin: m.durationmin,
             rating: m.ratingavg,
             agerestriction: m.agerestriction,
@@ -154,14 +143,12 @@ router.get('/', async (req, res) => {
             trailerurl: m.trailerurl
         }));
 
-        // --- 4. Поиск режиссеров (только если есть текст) ---
         if (searchTitle) {
             const directorQueryText = `
                 SELECT d.directorid, d.name FROM directors d
                 WHERE d.name ILIKE $1
                 ORDER BY d.name
             `;
-            // Создаем новый массив параметров, чтобы не путать с фильтрами фильмов
             const directorResult = await db.query(directorQueryText, [`%${searchTitle}%`]);
 
             foundDirectors = directorResult.rows.map(d => ({
@@ -170,9 +157,7 @@ router.get('/', async (req, res) => {
             }));
         }
 
-        // --- 5. Выбор Hero Movie ---
         if (currentMovies.length > 0) {
-            // Если есть результаты поиска, берем случайный из них, иначе случайный из топ-10
             heroMovie = currentMovies[Math.floor(Math.random() * currentMovies.length)];
 
             if (heroMovie && heroMovie.trailerurl) {
@@ -183,7 +168,6 @@ router.get('/', async (req, res) => {
             }
         }
 
-        // --- 6. Рендеринг ---
         res.render('index', {
             title: isFilterApplied ? 'Результаты поиска' : 'Афиша CinemaВох',
             currentMovies,
@@ -214,7 +198,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// AJAX-эндпоинт для автозаполнения поиска
 router.get('/api/search', async (req, res) => {
     const query = req.query.query ? req.query.query.trim() : '';
 
@@ -225,7 +208,6 @@ router.get('/api/search', async (req, res) => {
     const queryParams = [`%${query}%`];
 
     try {
-        // Поиск фильмов
         const movieQueryText = `
             SELECT movieid AS id, title, posterurl, 'movie' AS type, ratingavg
             FROM movies
@@ -235,7 +217,6 @@ router.get('/api/search', async (req, res) => {
         `;
         const movieResult = await db.query(movieQueryText, queryParams);
 
-        // Поиск режиссеров
         const directorQueryText = `
             SELECT directorid AS id, name AS title, NULL AS posterurl, 'director' AS type, NULL AS ratingavg
             FROM directors
@@ -245,7 +226,6 @@ router.get('/api/search', async (req, res) => {
         `;
         const directorResult = await db.query(directorQueryText, queryParams);
 
-        // Объединение и ограничение результатов (всего 5)
         const combinedResults = [
             ...movieResult.rows.map(row => ({ id: row.id, title: row.title, poster: row.posterurl, type: 'movie' })),
             ...directorResult.rows.map(row => ({ id: row.id, title: row.title, poster: null, type: 'director' }))
@@ -255,7 +235,6 @@ router.get('/api/search', async (req, res) => {
 
     } catch (e) {
         console.error('Ошибка при выполнении AJAX поиска:', e);
-        // В случае ошибки возвращаем ошибку сервера
         res.status(500).json({ error: 'Произошла ошибка сервера при поиске' });
     }
 });
@@ -263,16 +242,14 @@ router.get('/api/search', async (req, res) => {
 router.get('/contacts', (req, res) => {
     res.render('contactInformation/contacts', {
         title: 'Контакты CinemaVox',
-        isContacts: true // Для подсветки активной ссылки в шапке
+        isContacts: true
     });
 });
 
-// GET /shorts - Главная страница для просмотра коротких видео
 router.get('/shorts', async (req, res) => {
     try {
         const filterMovieId = req.query.movieid;
 
-        // 1. ПОЛУЧЕНИЕ НАЗВАНИЯ ФИЛЬМА (для заголовка и сообщений)
         let movieTitle = null;
         if (filterMovieId) {
             const movieResult = await db.query('SELECT title FROM movies WHERE movieid = $1', [filterMovieId]);
@@ -295,7 +272,6 @@ router.get('/shorts', async (req, res) => {
         let queryParams = [];
         let title = 'Короткие видео';
 
-        // 2. ФИЛЬТРАЦИЯ ЗАПРОСА
         if (filterMovieId) {
             query += ` WHERE s.movieid = $1`;
             queryParams.push(filterMovieId);

@@ -140,7 +140,8 @@ router.get('/', async (req, res) => {
             agerestriction: m.agerestriction,
             hasSessions: !!m.first_screening_id,
             firstScreeningId: m.first_screening_id,
-            trailerurl: m.trailerurl
+            trailerurl: m.trailerurl,
+            isactive: m.isactive,
         }));
 
         if (searchTitle) {

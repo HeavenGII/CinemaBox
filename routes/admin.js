@@ -2157,7 +2157,7 @@ router.post('/add-short', adminMiddleware,
 
 router.post('/shorts/:shortid/delete',adminMiddleware, async (req, res) => {
     const shortId = req.params.shortid;
-    const redirectUrl = '/admin/shorts';
+    const redirectUrl = '/shorts';
 
     if (!shortId || isNaN(parseInt(shortId))) {
         req.flash('error', 'Некорректный ID короткого видео.');
@@ -2192,8 +2192,6 @@ router.post('/shorts/:shortid/delete',adminMiddleware, async (req, res) => {
                     console.error(`❌ Ошибка удаления файла ${videoPath} через сервис хранения:`, e);
                 });
         }
-
-        req.flash('success', `Короткое видео ID: ${shortId} успешно удалено.`);
         res.redirect(redirectUrl);
 
     } catch (e) {

@@ -14,7 +14,7 @@ const CLEANING_TIME_MINUTES = 30;
 const CLEANING_TIME_MS = CLEANING_TIME_MINUTES * 60000;
 
 const DAY_START_HOUR = 9;
-const LATEST_START_HOUR = 21;
+const LATEST_START_HOUR = 0;
 
 function roundToNearestFiveMinutes(date) {
     const minutes = date.getMinutes();
@@ -1537,25 +1537,41 @@ router.post('/sessions', adminMiddleware,
             dayStart.setHours(DAY_START_HOUR, 0, 0, 0); // 9:00
 
             const dayEndLimit = new Date(requestedStart);
-            dayEndLimit.setHours(LATEST_START_HOUR, 0, 0, 0); // 21:00
+            dayEndLimit.setHours(LATEST_START_HOUR, 0, 0, 0); // 00:00 (полночь следующего дня)
 
-            // Проверка: сеанс должен начинаться в рабочее время (9:00 - 21:00 ВКЛЮЧИТЕЛЬНО)
-            // Разрешаем сеансы, которые начинаются РОВНО в 21:00
-            if (requestedStart.getTime() < dayStart.getTime() ||
-                requestedStart.getHours() > LATEST_START_HOUR ||
-                (requestedStart.getHours() === LATEST_START_HOUR && requestedStart.getMinutes() > 0)) {
-                req.flash('error', `Сеанс должен начинаться в рабочее время (${DAY_START_HOUR}:00 - ${LATEST_START_HOUR}:00).`);
+            // Если запрошено время после 21:00, но до 23:59 - это нормально
+            // Но если запрошено после 00:00 - это уже другой день
+
+            // Проверка: сеанс должен начинаться с 9:00 текущего дня до 00:00 следующего дня
+            if (requestedStart.getTime() < dayStart.getTime()) {
+                // Начинается до 9:00 - ошибка
+                req.flash('error', `Сеанс должен начинаться не раньше ${DAY_START_HOUR}:00.`);
                 req.flash('formData', req.body);
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // Проверка: сеанс должен заканчиваться до 21:00 + время уборки
+            // Создаем дату на следующий день для проверки 00:00
+            const nextDayMidnight = new Date(requestedStart);
+            nextDayMidnight.setDate(nextDayMidnight.getDate() + 1);
+            nextDayMidnight.setHours(0, 0, 0, 0);
+
+            // Проверяем, что сеанс начинается до 00:00 следующего дня
+            if (requestedStart.getTime() >= nextDayMidnight.getTime()) {
+                // Начинается в 00:00 или позже - это уже другой день
+                req.flash('error', `Сеанс должен начинаться до 00:00.`);
+                req.flash('formData', req.body);
+                return req.session.save(() => res.redirect('/admin/sessions'));
+            }
+
+            // Проверка: сеанс должен заканчиваться до 00:00 + время уборки
             const sessionEndTime = new Date(requestedStart.getTime() + (newMovieDurationMin * 60000) + CLEANING_TIME_MS);
-            const dayEndWithCleaning = new Date(requestedStart);
-            dayEndWithCleaning.setHours(LATEST_START_HOUR, CLEANING_TIME_MINUTES, 0, 0); // 21:15
+            const dayEndWithCleaning = new Date(nextDayMidnight.getTime() + CLEANING_TIME_MS); // 00:15 следующего дня
 
             if (sessionEndTime.getTime() > dayEndWithCleaning.getTime()) {
-                req.flash('error', `Фильм "${movieTitle}" слишком длинный (${newMovieDurationMin} мин) для начала в ${requestedStart.getHours()}:${requestedStart.getMinutes().toString().padStart(2, '0')}. Последний сеанс должен заканчиваться до ${LATEST_START_HOUR}:${CLEANING_TIME_MINUTES.toString().padStart(2, '0')}.`);
+                // Сеанс заканчивается после 00:15 - слишком поздно
+                const endHour = sessionEndTime.getHours();
+                const endMinute = sessionEndTime.getMinutes().toString().padStart(2, '0');
+                req.flash('error', `Фильм "${movieTitle}" слишком длинный (${newMovieDurationMin} мин) для начала в ${requestedStart.getHours()}:${requestedStart.getMinutes().toString().padStart(2, '0')}. Последний сеанс должен заканчиваться до 00:${CLEANING_TIME_MINUTES.toString().padStart(2, '0')} (заканчивается в ${endHour}:${endMinute}).`);
                 req.flash('formData', req.body);
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
@@ -1609,7 +1625,7 @@ router.post('/sessions', adminMiddleware,
                 let suggestions = [];
                 let slotsFoundCount = 0;
 
-                let windowStartMs = dayStart.getTime();
+                let windowStartMs = dayStart.getTime(); // 9:00
 
                 // Проходим по всем сеансам + дополнительное окно после последнего
                 for (let i = 0; i <= existingSessions.length; i++) {
@@ -1618,8 +1634,8 @@ router.post('/sessions', adminMiddleware,
                     if (i < existingSessions.length) {
                         windowEndMs = new Date(existingSessions[i].starttime).getTime();
                     } else {
-                        // Последнее окно заканчивается в 21:00 (начало последнего сеанса)
-                        windowEndMs = dayEndLimit.getTime();
+                        // Последнее окно заканчивается в 00:00 следующего дня
+                        windowEndMs = nextDayMidnight.getTime();
                     }
 
                     const gapSize = windowEndMs - windowStartMs;
@@ -1627,8 +1643,8 @@ router.post('/sessions', adminMiddleware,
                     // Проверяем, поместится ли фильм в этот промежуток
                     let fits = false;
                     if (i === existingSessions.length) {
-                        // Последний слот (вечер) - проверяем, что можем начать до 21:00
-                        if (windowStartMs <= dayEndLimit.getTime()) {
+                        // Последний слот (ночной) - проверяем, что можем начать до 00:00
+                        if (windowStartMs < nextDayMidnight.getTime()) {
                             fits = true;
                         }
                     } else {
@@ -1651,8 +1667,8 @@ router.post('/sessions', adminMiddleware,
                                 slotsFoundCount++;
                             }
                         } else {
-                            // Вечерний слот - проверяем лимит 21:00
-                            if (earlyStart.getTime() <= dayEndLimit.getTime()) {
+                            // Ночной слот - проверяем лимит 00:00
+                            if (earlyStart.getTime() < nextDayMidnight.getTime()) {
                                 const tStr = earlyStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                                 suggestions.push(`${tStr}`);
                                 slotsFoundCount++;

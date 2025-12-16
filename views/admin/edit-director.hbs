@@ -1,6 +1,11 @@
 <div class="main-wrapper">
     <div class="page-container">
-        <h1 class="page-title">Редактировать профиль режиссера: {{director.name}}</h1>
+        <div class="header-actions">
+            <h1 class="page-title">Редактировать профиль режиссера: {{director.name}}</h1>
+            {{#if isEdit}}
+                <a href="/director/{{director.directorid}}" class="btn btn-back">← Вернуться к режиссеру</a>
+            {{/if}}
+        </div>
 
         {{#if error}}
             <div class="alert alert-error">
@@ -19,9 +24,7 @@
 
             {{!-- Скрытое поле ID для идентификации режиссера --}}
             <input type="hidden" name="directorid" value="{{director.directorid}}">
-
             <input type="hidden" name="currentPhotourl" value="{{director.photourl}}">
-
 
             {{!-- Имя режиссера (НЕРЕДАКТИРУЕМО) --}}
             <div class="form-group">
@@ -36,7 +39,7 @@
             </div>
 
             <div class="form-group">
-                <label for="directorPhoto">Загрузить фото режиссера (directorPhoto)</label>
+                <label for="directorPhoto">Загрузить фото режиссера</label>
                 <input type="file" id="directorPhoto" name="directorPhoto" accept="image/*">
                 {{#if director.photourl}}
                     <small style="display: block; margin-top: 5px; opacity: 0.7;">Текущее фото: <a href="{{director.photourl}}" target="_blank">просмотреть</a>. Загрузка нового файла заменит его.</small>
@@ -45,11 +48,12 @@
 
             {{!-- Биография (TEXT) --}}
             <div class="form-group">
-                <label for="biography">Биография (biography)</label>
+                <label for="biography">Биография</label>
                 <textarea id="biography" name="biography" rows="10">{{director.biography}}</textarea>
             </div>
 
             <div class="form-actions">
+                <a href="/director/{{director.directorid}}" class="btn btn-cancel">Отмена</a>
                 <button type="submit" class="btn btn-save">Сохранить изменения</button>
             </div>
         </form>
@@ -57,14 +61,14 @@
         <hr class="section-divider">
 
         {{!-- Форма удаления --}}
-        <form action="/admin/delete-director/{{director.directorid}}" method="POST" class="delete-form" onsubmit="return confirm('Вы уверены, что хотите удалить профиль режиссера {{director.name}}? Это действие необратимо!');">
+        <form action="/admin/delete-director/{{director.directorid}}" method="POST" class="delete-form" onsubmit="return confirm('Вы уверены, что хотите обнулить профиль режиссера {{director.name}}? Это действие необратимо!');">
             <button type="submit" class="btn btn-delete">Обнулить профиль</button>
         </form>
     </div>
 </div>
+
 {{!-- Стили для формы редактирования --}}
 <style>
-    /* Reuse base styles for dark theme */
     .main-wrapper {
         background-color: #1a1a1a;
         color: #f0f0f0;
@@ -73,18 +77,42 @@
     }
 
     .page-container {
-        max-width: 800px; /* Wider container for the form */
+        max-width: 800px;
         margin: 0 auto;
         padding: 0 20px;
+    }
+
+    .header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 20px;
     }
 
     .page-title {
         font-size: 36px;
         color: #e50914;
         padding-top: 40px;
-        margin-bottom: 30px;
-        border-bottom: 2px solid #333;
-        padding-bottom: 10px;
+        margin: 0;
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .btn-back {
+        padding: 10px 20px;
+        background-color: #444;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        font-size: 16px;
+        font-weight: bold;
+        transition: background-color 0.3s;
+    }
+
+    .btn-back:hover {
+        background-color: #555;
     }
 
     .edit-form {
@@ -120,16 +148,15 @@
         transition: border-color 0.3s, box-shadow 0.3s;
     }
 
-    /* Стиль для поля только для чтения */
     .form-group input[type="text"][readonly] {
-        background-color: #444; /* Более светлый или другой цвет для визуального выделения */
+        background-color: #444;
         cursor: default;
         opacity: 0.8;
     }
 
     .form-group input[type="text"][readonly]:focus {
-        box-shadow: none; /* Удалить эффект фокуса */
-        border-color: #444; /* Сохранить границу без фокуса */
+        box-shadow: none;
+        border-color: #444;
     }
 
     .form-group input:focus,
@@ -144,26 +171,39 @@
         min-height: 200px;
     }
 
-    /* Buttons */
     .form-actions {
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
         margin-top: 30px;
+        gap: 15px;
     }
 
     .btn {
         padding: 12px 25px;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: bold;
         border: none;
         border-radius: 5px;
         cursor: pointer;
         transition: background-color 0.3s;
+        text-decoration: none;
+        text-align: center;
+    }
+
+    .btn-cancel {
+        background-color: #444;
+        color: white;
+        flex: 1;
+    }
+
+    .btn-cancel:hover {
+        background-color: #555;
     }
 
     .btn-save {
         background-color: #e50914;
         color: white;
+        flex: 2;
     }
 
     .btn-save:hover {
@@ -188,27 +228,37 @@
         margin: 40px 0;
     }
 
-    /* Адаптивность */
-    @media (max-width: 600px) {
-        .page-container {
-            padding: 0 15px;
+    @media (max-width: 768px) {
+        .header-actions {
+            flex-direction: column;
+            align-items: flex-start;
         }
 
         .page-title {
-            font-size: 30px;
+            font-size: 28px;
             padding-top: 20px;
+        }
+
+        .btn-back {
+            align-self: flex-start;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .page-container {
+            padding: 0 15px;
         }
 
         .edit-form {
             padding: 20px;
         }
 
-        .btn {
-            width: 100%;
+        .form-actions {
+            flex-direction: column;
         }
 
-        .form-actions {
-            justify-content: center;
+        .btn {
+            width: 100%;
         }
     }
 </style>

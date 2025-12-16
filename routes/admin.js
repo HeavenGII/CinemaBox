@@ -1505,7 +1505,6 @@ router.post('/sessions', adminMiddleware,
         const requestedStart = new Date(startTime);
         const now = new Date();
 
-        // Проверка: нельзя создать сеанс в прошлом
         if (requestedStart < now) {
             req.flash('error', 'Нельзя создать сеанс в прошлом.');
             req.flash('formData', req.body);
@@ -1513,7 +1512,6 @@ router.post('/sessions', adminMiddleware,
         }
 
         try {
-            // Получаем информацию о фильме
             const { rows: movieInfo } = await pool.query(
                 'SELECT durationmin, title FROM movies WHERE movieid = $1',
                 [movieId]
@@ -1526,49 +1524,37 @@ router.post('/sessions', adminMiddleware,
 
             const newMovieDurationMin = movieInfo[0].durationmin;
             const movieTitle = movieInfo[0].title;
-            // Полная длительность: фильм + уборка
             const newSessionFullDurationMs = (newMovieDurationMin * 60000) + CLEANING_TIME_MS;
 
-            // Время окончания запрашиваемого сеанса (с уборкой)
             const requestedEndMs = requestedStart.getTime() + newSessionFullDurationMs;
 
-            // Определяем границы рабочего дня
             const dayStart = new Date(requestedStart);
-            dayStart.setHours(DAY_START_HOUR, 0, 0, 0); // 9:00
+            dayStart.setHours(DAY_START_HOUR, 0, 0, 0);
 
             const dayEndLimit = new Date(requestedStart);
-            dayEndLimit.setHours(LATEST_START_HOUR, 0, 0, 0); // 00:00 (полночь следующего дня)
+            dayEndLimit.setHours(LATEST_START_HOUR, 0, 0, 0);
 
-            // Если запрошено время после 21:00, но до 23:59 - это нормально
-            // Но если запрошено после 00:00 - это уже другой день
 
-            // Проверка: сеанс должен начинаться с 9:00 текущего дня до 00:00 следующего дня
             if (requestedStart.getTime() < dayStart.getTime()) {
-                // Начинается до 9:00 - ошибка
                 req.flash('error', `Сеанс должен начинаться не раньше ${DAY_START_HOUR}:00.`);
                 req.flash('formData', req.body);
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // Создаем дату на следующий день для проверки 00:00
             const nextDayMidnight = new Date(requestedStart);
             nextDayMidnight.setDate(nextDayMidnight.getDate() + 1);
             nextDayMidnight.setHours(0, 0, 0, 0);
 
-            // Проверяем, что сеанс начинается до 00:00 следующего дня
             if (requestedStart.getTime() >= nextDayMidnight.getTime()) {
-                // Начинается в 00:00 или позже - это уже другой день
                 req.flash('error', `Сеанс должен начинаться до 00:00.`);
                 req.flash('formData', req.body);
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // Проверка: сеанс должен заканчиваться до 00:00 + время уборки
             const sessionEndTime = new Date(requestedStart.getTime() + (newMovieDurationMin * 60000) + CLEANING_TIME_MS);
-            const dayEndWithCleaning = new Date(nextDayMidnight.getTime() + CLEANING_TIME_MS); // 00:15 следующего дня
+            const dayEndWithCleaning = new Date(nextDayMidnight.getTime() + CLEANING_TIME_MS);
 
             if (sessionEndTime.getTime() > dayEndWithCleaning.getTime()) {
-                // Сеанс заканчивается после 00:15 - слишком поздно
                 const endHour = sessionEndTime.getHours();
                 const endMinute = sessionEndTime.getMinutes().toString().padStart(2, '0');
                 req.flash('error', `Фильм "${movieTitle}" слишком длинный (${newMovieDurationMin} мин) для начала в ${requestedStart.getHours()}:${requestedStart.getMinutes().toString().padStart(2, '0')}. Последний сеанс должен заканчиваться до 00:${CLEANING_TIME_MINUTES.toString().padStart(2, '0')} (заканчивается в ${endHour}:${endMinute}).`);
@@ -1576,7 +1562,6 @@ router.post('/sessions', adminMiddleware,
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // Получаем все существующие сеансы на этот день
             const allSessionsQuery = `
                 SELECT 
                     s.screeningid,
@@ -1603,7 +1588,6 @@ router.post('/sessions', adminMiddleware,
                 [hallId, searchDayStart.toISOString(), searchDayEnd.toISOString()]
             );
 
-            // Проверка на конфликты с существующими сеансами
             let collisionFound = false;
             let conflictingMovie = '';
 
@@ -1612,7 +1596,6 @@ router.post('/sessions', adminMiddleware,
                 const existStartMs = new Date(session.starttime).getTime();
                 const existEndMs = existStartMs + (session.durationmin * 60000) + CLEANING_TIME_MS;
 
-                // Проверка пересечения
                 if (requestedStart.getTime() < existEndMs && existStartMs < requestedEndMs) {
                     collisionFound = true;
                     conflictingMovie = session.movie_title;
@@ -1620,54 +1603,46 @@ router.post('/sessions', adminMiddleware,
                 }
             }
 
-            // Если найден конфликт, ищем свободные слоты
             if (collisionFound) {
                 let suggestions = [];
                 let slotsFoundCount = 0;
 
-                let windowStartMs = dayStart.getTime(); // 9:00
+                let windowStartMs = dayStart.getTime();
 
-                // Проходим по всем сеансам + дополнительное окно после последнего
                 for (let i = 0; i <= existingSessions.length; i++) {
                     let windowEndMs;
 
                     if (i < existingSessions.length) {
                         windowEndMs = new Date(existingSessions[i].starttime).getTime();
                     } else {
-                        // Последнее окно заканчивается в 00:00 следующего дня
                         windowEndMs = nextDayMidnight.getTime();
                     }
 
                     const gapSize = windowEndMs - windowStartMs;
 
-                    // Проверяем, поместится ли фильм в этот промежуток
                     let fits = false;
                     if (i === existingSessions.length) {
-                        // Последний слот (ночной) - проверяем, что можем начать до 00:00
+
                         if (windowStartMs < nextDayMidnight.getTime()) {
                             fits = true;
                         }
                     } else {
-                        // Промежуточный слот
                         if (gapSize >= newSessionFullDurationMs) {
                             fits = true;
                         }
                     }
 
                     if (fits) {
-                        // 1. Предложение "рано" (в начале окна)
                         let earlyStart = new Date(windowStartMs);
                         earlyStart = roundToNearestFiveMinutes(earlyStart);
 
                         if (i < existingSessions.length) {
-                            // Проверяем, что после округления мы не вышли за границы
                             if (earlyStart.getTime() + newSessionFullDurationMs <= windowEndMs) {
                                 const tStr = earlyStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                                 suggestions.push(`${tStr}`);
                                 slotsFoundCount++;
                             }
                         } else {
-                            // Ночной слот - проверяем лимит 00:00
                             if (earlyStart.getTime() < nextDayMidnight.getTime()) {
                                 const tStr = earlyStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                                 suggestions.push(`${tStr}`);
@@ -1675,21 +1650,17 @@ router.post('/sessions', adminMiddleware,
                             }
                         }
 
-                        // 2. Предложение "поздно" (в конце окна, если есть место)
                         if (i < existingSessions.length) {
                             let lateStartMs = windowEndMs - newSessionFullDurationMs;
 
-                            // Если разница между началом окна и поздним стартом > 15 минут
                             if (lateStartMs - windowStartMs > 15 * 60000) {
                                 let lateStart = new Date(lateStartMs);
                                 lateStart = roundToNearestFiveMinutes(lateStart);
 
-                                // Коррекция: если округление привело к пересечению
                                 if (lateStart.getTime() + newSessionFullDurationMs > windowEndMs) {
                                     lateStart.setMinutes(lateStart.getMinutes() - 5);
                                 }
 
-                                // Проверяем, что не вышли за начало окна
                                 if (lateStart.getTime() >= windowStartMs) {
                                     const tStr = lateStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                                     suggestions.push(`${tStr}`);
@@ -1699,18 +1670,15 @@ router.post('/sessions', adminMiddleware,
                         }
                     }
 
-                    // Обновляем начало следующего окна
                     if (i < existingSessions.length) {
                         windowStartMs = new Date(existingSessions[i].starttime).getTime() +
                             (existingSessions[i].durationmin * 60000) +
                             CLEANING_TIME_MS;
                     }
 
-                    // Ограничиваем количество предложений
                     if (slotsFoundCount >= 4) break;
                 }
 
-                // Формируем сообщение об ошибке с предложениями
                 if (suggestions.length === 0) {
                     req.flash('error', `Конфликт с фильмом "${conflictingMovie}"! В этот день нет свободного времени для фильма длительностью ${newMovieDurationMin} мин (+${CLEANING_TIME_MINUTES} мин уборка).`);
                 } else {
@@ -1722,7 +1690,6 @@ router.post('/sessions', adminMiddleware,
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // Если конфликтов нет, создаем сеанс
             const insertQuery = `
                 INSERT INTO screenings (movieid, hallid, starttime)
                 VALUES ($1, $2, $3)

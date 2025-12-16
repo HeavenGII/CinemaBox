@@ -1505,6 +1505,7 @@ router.post('/sessions', adminMiddleware,
         const requestedStart = new Date(startTime);
         const now = new Date();
 
+        // Проверка: нельзя создать сеанс в прошлом
         if (requestedStart < now) {
             req.flash('error', 'Нельзя создать сеанс в прошлом.');
             req.flash('formData', req.body);
@@ -1512,6 +1513,7 @@ router.post('/sessions', adminMiddleware,
         }
 
         try {
+            // Получаем информацию о фильме
             const { rows: movieInfo } = await pool.query(
                 'SELECT durationmin, title FROM movies WHERE movieid = $1',
                 [movieId]
@@ -1524,20 +1526,27 @@ router.post('/sessions', adminMiddleware,
 
             const newMovieDurationMin = movieInfo[0].durationmin;
             const movieTitle = movieInfo[0].title;
+            // Полная длительность: фильм + уборка
             const newSessionFullDurationMs = (newMovieDurationMin * 60000) + CLEANING_TIME_MS;
 
+            // Время окончания запрашиваемого сеанса (с уборкой)
+            const requestedEndMs = requestedStart.getTime() + newSessionFullDurationMs;
+
+            // Определяем границы рабочего дня
             const dayStart = new Date(requestedStart);
             dayStart.setHours(DAY_START_HOUR, 0, 0, 0);
 
             const dayEndLimit = new Date(requestedStart);
             dayEndLimit.setHours(LATEST_START_HOUR, 0, 0, 0);
 
+            // Проверка: сеанс должен начинаться в рабочее время (9:00 - 21:00)
             if (requestedStart.getTime() > dayEndLimit.getTime() || requestedStart.getTime() < dayStart.getTime()) {
                 req.flash('error', `Сеанс должен начинаться в рабочее время (${DAY_START_HOUR}:00 - ${LATEST_START_HOUR}:00).`);
                 req.flash('formData', req.body);
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
+            // Проверка: фильм не слишком длинный для начала в выбранное время
             const latestPossibleStart = new Date(dayEndLimit.getTime() - newSessionFullDurationMs);
             if (requestedStart.getTime() > latestPossibleStart.getTime()) {
                 req.flash('error', `Фильм "${movieTitle}" слишком длинный (${newMovieDurationMin} мин) для начала в ${requestedStart.getHours()}:${requestedStart.getMinutes().toString().padStart(2, '0')}.`);
@@ -1545,6 +1554,7 @@ router.post('/sessions', adminMiddleware,
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
+            // Получаем все существующие сеансы на этот день
             const allSessionsQuery = `
                 SELECT 
                     s.screeningid,
@@ -1561,16 +1571,17 @@ router.post('/sessions', adminMiddleware,
             `;
 
             const searchDayStart = new Date(requestedStart);
-            searchDayStart.setHours(0,0,0,0);
+            searchDayStart.setHours(0, 0, 0, 0);
 
             const searchDayEnd = new Date(requestedStart);
-            searchDayEnd.setHours(23,59,59,999);
+            searchDayEnd.setHours(23, 59, 59, 999);
 
             const { rows: existingSessions } = await pool.query(
                 allSessionsQuery,
                 [hallId, searchDayStart.toISOString(), searchDayEnd.toISOString()]
             );
 
+            // Проверка на конфликты с существующими сеансами
             let collisionFound = false;
             let conflictingMovie = '';
 
@@ -1579,19 +1590,22 @@ router.post('/sessions', adminMiddleware,
                 const existStartMs = new Date(session.starttime).getTime();
                 const existEndMs = existStartMs + (session.durationmin * 60000) + CLEANING_TIME_MS;
 
-                if (requestedStart.getTime() < existEndMs && existStartMs < new Date(requestedStart).getTime() + newSessionFullDurationMs) {
+                // Улучшенная проверка пересечения
+                if (requestedStart.getTime() < existEndMs && existStartMs < requestedEndMs) {
                     collisionFound = true;
                     conflictingMovie = session.movie_title;
                     break;
                 }
             }
 
+            // Если найден конфликт, ищем свободные слоты
             if (collisionFound) {
                 let suggestions = [];
                 let slotsFoundCount = 0;
 
                 let windowStartMs = dayStart.getTime();
 
+                // Проходим по всем сеансам + дополнительное окно после последнего
                 for (let i = 0; i <= existingSessions.length; i++) {
                     let windowEndMs;
 
@@ -1603,48 +1617,58 @@ router.post('/sessions', adminMiddleware,
 
                     const gapSize = windowEndMs - windowStartMs;
 
+                    // Проверяем, поместится ли фильм в этот промежуток
                     let fits = false;
                     if (i === existingSessions.length) {
+                        // Последний слот (вечер)
                         if (windowStartMs <= dayEndLimit.getTime()) {
                             fits = true;
                         }
                     } else {
+                        // Промежуточный слот
                         if (gapSize >= newSessionFullDurationMs) {
                             fits = true;
                         }
                     }
 
                     if (fits) {
+                        // 1. Предложение "рано" (в начале окна)
                         let earlyStart = new Date(windowStartMs);
                         earlyStart = roundToNearestFiveMinutes(earlyStart);
 
                         if (i < existingSessions.length) {
+                            // Проверяем, что после округления мы не вышли за границы
                             if (earlyStart.getTime() + newSessionFullDurationMs <= windowEndMs) {
-                                const tStr = earlyStart.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+                                const tStr = earlyStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                                 suggestions.push(`${tStr}`);
                                 slotsFoundCount++;
                             }
                         } else {
+                            // Вечерний слот
                             if (earlyStart.getTime() <= dayEndLimit.getTime()) {
-                                const tStr = earlyStart.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+                                const tStr = earlyStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                                 suggestions.push(`${tStr}`);
                                 slotsFoundCount++;
                             }
                         }
 
+                        // 2. Предложение "поздно" (в конце окна, если есть место)
                         if (i < existingSessions.length) {
                             let lateStartMs = windowEndMs - newSessionFullDurationMs;
 
+                            // Если разница между началом окна и поздним стартом > 15 минут
                             if (lateStartMs - windowStartMs > 15 * 60000) {
                                 let lateStart = new Date(lateStartMs);
                                 lateStart = roundToNearestFiveMinutes(lateStart);
 
+                                // Коррекция: если округление привело к пересечению
                                 if (lateStart.getTime() + newSessionFullDurationMs > windowEndMs) {
                                     lateStart.setMinutes(lateStart.getMinutes() - 5);
                                 }
 
+                                // Проверяем, что не вышли за начало окна
                                 if (lateStart.getTime() >= windowStartMs) {
-                                    const tStr = lateStart.toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});
+                                    const tStr = lateStart.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
                                     suggestions.push(`${tStr}`);
                                     slotsFoundCount++;
                                 }
@@ -1652,13 +1676,18 @@ router.post('/sessions', adminMiddleware,
                         }
                     }
 
+                    // Обновляем начало следующего окна
                     if (i < existingSessions.length) {
-                        windowStartMs = new Date(existingSessions[i].starttime).getTime() + (existingSessions[i].durationmin * 60000) + CLEANING_TIME_MS;
+                        windowStartMs = new Date(existingSessions[i].starttime).getTime() +
+                            (existingSessions[i].durationmin * 60000) +
+                            CLEANING_TIME_MS;
                     }
 
+                    // Ограничиваем количество предложений
                     if (slotsFoundCount >= 4) break;
                 }
 
+                // Формируем сообщение об ошибке с предложениями
                 if (suggestions.length === 0) {
                     req.flash('error', `Конфликт с фильмом "${conflictingMovie}"! В этот день нет свободного времени для фильма длительностью ${newMovieDurationMin} мин (+${CLEANING_TIME_MINUTES} мин уборка).`);
                 } else {
@@ -1670,6 +1699,7 @@ router.post('/sessions', adminMiddleware,
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
+            // Если конфликтов нет, создаем сеанс
             const insertQuery = `
                 INSERT INTO screenings (movieid, hallid, starttime)
                 VALUES ($1, $2, $3)

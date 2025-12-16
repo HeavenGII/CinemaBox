@@ -141,7 +141,7 @@ router.get('/', async (req, res) => {
             hasSessions: !!m.first_screening_id,
             firstScreeningId: m.first_screening_id,
             trailerurl: m.trailerurl,
-            isactive: m.isactive,
+            isactive: m.isactive
         }));
 
         if (searchTitle) {

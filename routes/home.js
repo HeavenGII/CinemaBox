@@ -89,9 +89,9 @@ router.get('/', async (req, res) => {
                 m.releaseyear,
                 m.trailerurl,
                 m.agerestriction,
+                m.isactive,
                 ${firstScreeningIdSelect}
             FROM movies m
-            WHERE m.isactive = true
         `;
 
         if (searchTitle) {

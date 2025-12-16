@@ -35,55 +35,55 @@
     {{else}}
         <h2>🔥 Сейчас в прокате</h2>
     {{/if}}
-
     {{#if currentMovies.length}}
-        <div class="slider-container">
-            <button class="slider-arrow slider-prev" data-target="current-movies-slider">
-                &#10094;
-            </button>
+        {{#if isactive}}
+            <div class="slider-container">
+                <button class="slider-arrow slider-prev" data-target="current-movies-slider">
+                    &#10094;
+                </button>
 
-            <div class="movies-grid slider-wrapper" id="current-movies-slider">
-                {{#each currentMovies}}
-                    <div class="movie-card">
-                        <a href="/movies/{{movield}}">
-                            <div class="poster-container">
-                                <img src="{{posterurl}}" alt="Постер фильма {{title}}">
-                                {{#if agerestriction}}
-                                    <div class="age-restriction-badge-small age-{{agerestriction}}">
-                                        {{agerestriction}}+
-                                    </div>
+                <div class="movies-grid slider-wrapper" id="current-movies-slider">
+                    {{#each currentMovies}}
+                        <div class="movie-card">
+                            <a href="/movies/{{movield}}">
+                                <div class="poster-container">
+                                    <img src="{{posterurl}}" alt="Постер фильма {{title}}">
+                                    {{#if agerestriction}}
+                                        <div class="age-restriction-badge-small age-{{agerestriction}}">
+                                            {{agerestriction}}+
+                                        </div>
+                                    {{/if}}
+                                </div>
+                            </a>
+
+                            <span class="rating-badge">{{rating}} ⭐</span>
+
+                            <div class="card-info">
+                                <div>
+                                    <h3>{{title}}</h3>
+                                    <p class="genre">{{genre}} | {{formatDuration durationmin}}</p>
+                                    {{#if agerestriction}}
+                                        <p class="age-text">
+                                            <i class="fas fa-user-check"></i>
+                                            {{agerestriction}}+ лет
+                                        </p>
+                                    {{/if}}
+                                </div>
+                                {{#if hasSessions}}
+                                    <a href="/movies/{{movield}}/select-time" class="btn btn-card">Сеансы и билеты</a>
+                                {{else}}
+                                    <span class="btn btn-card btn-disabled">Нет сеансов</span>
                                 {{/if}}
                             </div>
-                        </a>
-
-                        <span class="rating-badge">{{rating}} ⭐</span>
-
-                        <div class="card-info">
-                            <div>
-                                <h3>{{title}}</h3>
-                                <p class="genre">{{genre}} | {{formatDuration durationmin}}</p>
-                                {{#if agerestriction}}
-                                    <p class="age-text">
-                                        <i class="fas fa-user-check"></i>
-                                        {{agerestriction}}+ лет
-                                    </p>
-                                {{/if}}
-                            </div>
-                            {{#if hasSessions}}
-                                <a href="/movies/{{movield}}/select-time" class="btn btn-card">Сеансы и билеты</a>
-                            {{else}}
-                                <span class="btn btn-card btn-disabled">Нет сеансов</span>
-                            {{/if}}
                         </div>
-                    </div>
-                {{/each}}
+                    {{/each}}
+                </div>
+
+                <button class="slider-arrow slider-next" data-target="current-movies-slider">
+                    &#10095;
+                </button>
             </div>
-
-            <button class="slider-arrow slider-next" data-target="current-movies-slider">
-                &#10095;
-            </button>
-        </div>
-
+        {{/if}}
         {{#unless searchTitle}}
             <div style="text-align: center; margin-top: 40px;">
                 <a href="/movies" class="btn btn-primary">Вся Афиша</a>

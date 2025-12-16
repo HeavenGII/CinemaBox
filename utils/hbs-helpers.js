@@ -1,6 +1,5 @@
 const moment = require('moment');
 
-
 moment.locale('ru');
 
 module.exports = {
@@ -8,7 +7,6 @@ module.exports = {
         return JSON.stringify(context);
     },
 
-    // 1. Хелперы форматирования
     formatDuration: function(minutes) {
         if (!minutes || typeof minutes !== 'number' || minutes < 0) {
             return 'Н/Д';
@@ -56,7 +54,6 @@ module.exports = {
         } else if (target.isSame(tomorrow)) {
             return 'Завтра';
         } else {
-            // "25 ноября" (без года)
             return moment(date).format('D MMMM');
         }
     },
@@ -101,5 +98,71 @@ module.exports = {
             array.push(i);
         }
         return array;
+    },
+
+    // ДОБАВЛЕННЫЕ ХЕЛПЕРЫ ДЛЯ ЛОГИЧЕСКИХ ОПЕРАЦИЙ:
+
+    // Хелпер NOT (логическое НЕ)
+    not: function(value) {
+        return !value;
+    },
+
+    // Хелпер OR (логическое ИЛИ)
+    or: function(v1, v2) {
+        return v1 || v2;
+    },
+
+    // Хелпер AND (логическое И)
+    and: function(v1, v2) {
+        return v1 && v2;
+    },
+
+    // Хелпер для проверки true
+    isTrue: function(value) {
+        return value === true;
+    },
+
+    // Хелпер для проверки false
+    isFalse: function(value) {
+        return value === false;
+    },
+
+    // Хелпер для условного отображения с OR
+    ifOr: function(v1, v2, options) {
+        if (v1 || v2) {
+            return options.fn(this);
+        }
+        return options.inverse(this);
+    },
+
+    // Хелпер для условного отображения с AND
+    ifAnd: function(v1, v2, options) {
+        if (v1 && v2) {
+            return options.fn(this);
+        }
+        return options.inverse(this);
+    },
+
+    // Хелпер для условного отображения с NOT
+    ifNot: function(value, options) {
+        if (!value) {
+            return options.fn(this);
+        }
+        return options.inverse(this);
+    },
+
+    // Простой хелпер для проверки на null/undefined
+    isDefined: function(value) {
+        return value !== null && value !== undefined;
+    },
+
+    // Хелпер для проверки пустоты массива
+    isEmpty: function(array) {
+        return !array || array.length === 0;
+    },
+
+    // Хелпер для проверки непустоты массива
+    isNotEmpty: function(array) {
+        return array && array.length > 0;
     }
 };

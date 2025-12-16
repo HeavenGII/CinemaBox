@@ -40,12 +40,14 @@ router.get('/', async (req, res) => {
     const rawSearchTitle = req.query.searchTitle;
     const searchTitle = (rawSearchTitle && rawSearchTitle.trim().length > 0) ? rawSearchTitle.trim() : null;
 
-
     const filterYear = validateYear(req.query.year);
     const filterGenre = req.query.genre && req.query.genre.trim() !== '' ? req.query.genre.trim() : null;
     const filterMinRating = validateRating(req.query.minRating);
 
     const isFilterApplied = !!(searchTitle || filterYear || filterGenre || filterMinRating);
+
+    // НОВАЯ ПЕРЕМЕННАЯ: показывать ли только активные фильмы
+    const showOnlyActive = !isFilterApplied; // Только на главной без фильтров
 
     let queryParams = [];
     let whereConditions = [];
@@ -69,7 +71,6 @@ router.get('/', async (req, res) => {
     `;
 
     try {
-
         const genresResult = await db.query(`
             SELECT DISTINCT trim(unnest(string_to_array(genre, ','))) AS clean_genre 
             FROM movies 
@@ -94,6 +95,12 @@ router.get('/', async (req, res) => {
             FROM movies m
         `;
 
+        // ВАЖНО: добавляем условие isactive = true только если НЕТ фильтров
+        if (showOnlyActive) {
+            whereConditions.push(`m.isactive = true`);
+        }
+
+        // Остальные условия как обычно
         if (searchTitle) {
             whereConditions.push(`m.title ILIKE $${paramCounter}`);
             queryParams.push(`%${searchTitle}%`);
@@ -122,6 +129,7 @@ router.get('/', async (req, res) => {
             baseQuery += ' WHERE ' + whereConditions.join(' AND ');
         }
 
+        // Сортировка
         if (isFilterApplied) {
             baseQuery += ` ORDER BY m.ratingavg DESC, m.releaseyear DESC`;
         } else {
@@ -144,22 +152,16 @@ router.get('/', async (req, res) => {
             isactive: m.isactive
         }));
 
-        if (searchTitle) {
-            const directorQueryText = `
-                SELECT d.directorid, d.name FROM directors d
-                WHERE d.name ILIKE $1
-                ORDER BY d.name
-            `;
-            const directorResult = await db.query(directorQueryText, [`%${searchTitle}%`]);
-
-            foundDirectors = directorResult.rows.map(d => ({
-                directorId: d.directorid,
-                fullName: d.name
-            }));
-        }
-
+        // Hero movie должен быть активным всегда
         if (currentMovies.length > 0) {
-            heroMovie = currentMovies[Math.floor(Math.random() * currentMovies.length)];
+            // Ищем активный фильм для heroMovie
+            const activeMovies = currentMovies.filter(m => m.isactive);
+            if (activeMovies.length > 0) {
+                heroMovie = activeMovies[Math.floor(Math.random() * activeMovies.length)];
+            } else {
+                // Если нет активных, берем первый из результатов
+                heroMovie = currentMovies[0];
+            }
 
             if (heroMovie && heroMovie.trailerurl) {
                 const youtubeId = getYouTubeId(heroMovie.trailerurl);
@@ -180,6 +182,7 @@ router.get('/', async (req, res) => {
             filterGenre,
             filterMinRating,
             isFilterApplied,
+            showOnlyActive, // Передаем в шаблон
 
             currentYear: new Date().getFullYear(),
             isHome: true

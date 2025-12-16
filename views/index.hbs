@@ -1,31 +1,3 @@
-<!-- Герой-секция (Слайдер) -->
-<section class="hero-slider" {{#unless heroMovie.trailerYoutubeId}}style="background-image: url('{{heroMovie.posterUrl}}');"{{/unless}}>
-    {{#if heroMovie.trailerYoutubeId}}
-        <div class="video-background-container">
-            <iframe
-                    src="https://www.youtube.com/embed/{{heroMovie.trailerYoutubeId}}?autoplay=1&mute=1&loop=1&playlist={{heroMovie.trailerYoutubeId}}&controls=0&showinfo=0&rel=0&iv_load_policy=3&disablekb=1&modestbranding=1"
-            frameborder="0"
-            allow="autoplay; encrypted-media"
-            allowfullscreen
-            class="video-background-iframe"
-            ></iframe>
-        </div>
-    {{/if}}
-
-    <div class="hero-content">
-        <h1>{{heroMovie.title}}</h1>
-        <p>Рейтинг: {{heroMovie.rating}} ⭐ | Продолжительность: {{formatDuration heroMovie.durationmin}}</p>
-        <div class="hero-actions">
-            {{#if heroMovie.hasSessions}}
-                <a href="/movies/{{heroMovie.movield}}/select-time" class="btn btn-primary">Купить билет</a>
-            {{else}}
-                <span class="btn btn-primary btn-disabled">Нет сеансов</span>
-            {{/if}}
-            <a href="/movies/{{heroMovie.movield}}" class="btn btn-secondary">Информация</a>
-        </div>
-    </div>
-</section>
-
 <!-- Основной контент (Афиша) -->
 <main class="main-content">
     {{#if searchTitle}}
@@ -35,6 +7,7 @@
     {{else}}
         <h2>🔥 Сейчас в прокате</h2>
     {{/if}}
+
     {{#if currentMovies.length}}
         <div class="slider-container">
             <button class="slider-arrow slider-prev" data-target="current-movies-slider">
@@ -43,7 +16,7 @@
 
             <div class="movies-grid slider-wrapper" id="current-movies-slider">
                 {{#each currentMovies}}
-                    {{#ifeq isactive 'true'}}
+                    {{#if (or isactive (not ../showOnlyActive))}}
                         <div class="movie-card">
                             <a href="/movies/{{movield}}">
                                 <div class="poster-container">
@@ -53,6 +26,9 @@
                                             {{agerestriction}}+
                                         </div>
                                     {{/if}}
+                                    {{#unless isactive}}
+                                        <div class="inactive-badge">Не в прокате</div>
+                                    {{/unless}}
                                 </div>
                             </a>
 
@@ -68,6 +44,12 @@
                                             {{agerestriction}}+ лет
                                         </p>
                                     {{/if}}
+                                    {{#unless isactive}}
+                                        <p class="inactive-text">
+                                            <i class="fas fa-ban"></i>
+                                            Фильм не в прокате
+                                        </p>
+                                    {{/unless}}
                                 </div>
                                 {{#if hasSessions}}
                                     <a href="/movies/{{movield}}/select-time" class="btn btn-card">Сеансы и билеты</a>
@@ -76,7 +58,7 @@
                                 {{/if}}
                             </div>
                         </div>
-                    {{/ifeq}}
+                    {{/if}}
                 {{/each}}
             </div>
 
@@ -84,6 +66,7 @@
                 &#10095;
             </button>
         </div>
+
         {{#unless searchTitle}}
             <div style="text-align: center; margin-top: 40px;">
                 <a href="/movies" class="btn btn-primary">Вся Афиша</a>

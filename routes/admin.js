@@ -10,15 +10,12 @@ const { sendAccountBlockedEmail, sendScreeningCancellationEmail } = require('../
 const { sendAccountBlockedNotification, sendScreeningCancellationNotification } = require('../services/telegram-bot-handler');
 const { uploadFile, deleteFile } = require('../services/storage-service');
 
-// --- КОНСТАНТЫ И ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ СЕАНСОВ ---
 const CLEANING_TIME_MINUTES = 30;
 const CLEANING_TIME_MS = CLEANING_TIME_MINUTES * 60000;
 
-// ЛИМИТЫ РАБОТЫ КИНОТЕАТРА
 const DAY_START_HOUR = 9;
 const LATEST_START_HOUR = 21;
 
-// Вспомогательная функция для округления времени до ближайших 5 минут
 function roundToNearestFiveMinutes(date) {
     const minutes = date.getMinutes();
     const roundedMinutes = Math.round(minutes / 5) * 5;
@@ -31,16 +28,12 @@ function roundToNearestFiveMinutes(date) {
     date.setSeconds(0, 0);
     return date;
 }
-// --- КОНЕЦ КОНСТАНТ СЕАНСОВ ---
 
 router.use(adminMiddleware);
 
-// --- НАСТРОЙКА MULTER ДЛЯ ФАЙЛОВ (ВРЕМЕННОЕ ЛОКАЛЬНОЕ ХРАНЕНИЕ) ---
-// ВАЖНО: Multer сохраняет файлы локально, а затем uploadFile перемещает их в Yandex Cloud
-// Постеры фильмов
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        // Используем временную папку для загрузки
         const dir = 'public/uploads/posters';
         if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
@@ -66,7 +59,6 @@ const upload = multer({
     }
 }).single('posterFile');
 
-// Фото режиссеров
 const directorPhotoStorage = multer.diskStorage({
     destination: function (req, file, cb) {
         const dir = 'public/uploads/directors';
@@ -94,7 +86,6 @@ const uploadDirectorPhoto = multer({
     }
 }).single('directorPhoto');
 
-// --- НАСТРОЙКА MULTER ДЛЯ КОРОТКИХ ВИДЕО ---
 const shortVideoStorage = multer.diskStorage({
     destination: function (req, file, cb) {
         const dir = 'public/uploads/shorts';
@@ -111,7 +102,7 @@ const shortVideoStorage = multer.diskStorage({
 
 const uploadShortVideo = multer({
     storage: shortVideoStorage,
-    limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB лимит для видео
+    limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedMimes = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo'];
         if (allowedMimes.includes(file.mimetype)) {
@@ -122,12 +113,10 @@ const uploadShortVideo = multer({
     }
 }).single('shortVideoFile');
 
-// --- РАСШИРЕННЫЕ ВАЛИДАТОРЫ (Оставлены без изменений) ---
 const movieValidators = [
     body('title', 'Название фильма (Русское) должно быть от 2 до 100 символов')
-        .isLength({ min: 2, max: 100 }).trim().escape()
-        .custom(async (value, { req }) => {
-            // Проверка дублирования при добавлении нового фильма
+        .isLength({min: 2, max: 100}).trim().escape()
+        .custom(async (value, {req}) => {
             if (!req.params.movieid) {
                 const query = `
                     SELECT movieid FROM movies 
@@ -152,9 +141,8 @@ const movieValidators = [
         }),
 
     body('originaltitle', 'Оригинальное название (Английское) должно быть от 1 до 100 символов')
-        .isLength({ min: 1, max: 100 }).trim().escape()
-        .custom(async (value, { req }) => {
-            // Для редактирования фильма - проверяем, не конфликтует ли с другими фильмами
+        .isLength({min: 1, max: 100}).trim().escape()
+        .custom(async (value, {req}) => {
             if (req.params.movieid) {
                 const query = `
                     SELECT movieid FROM movies 
@@ -179,37 +167,37 @@ const movieValidators = [
         }),
 
     body('description', 'Описание должно быть от 10 до 2000 символов')
-        .isLength({ min: 10, max: 2000 }).trim().escape(),
+        .isLength({min: 10, max: 2000}).trim().escape(),
 
     body('durationmin', 'Продолжительность должна быть числом от 1 до 360 минут')
-        .isInt({ min: 1, max: 360 }).toInt(),
+        .isInt({min: 1, max: 360}).toInt(),
 
     body('releaseYear', 'Год выпуска должен быть от 1888 до текущего года')
-        .isInt({ min: 1888, max: new Date().getFullYear() })
-        .isLength({ min: 4, max: 4 }).toInt(),
+        .isInt({min: 1888, max: new Date().getFullYear()})
+        .isLength({min: 4, max: 4}).toInt(),
 
     body('price', 'Цена билета должна быть числом от 0 до 10000')
-        .isFloat({ min: 0, max: 10000 }).toFloat(),
+        .isFloat({min: 0, max: 10000}).toFloat(),
 
     body('directorName', 'Имя режиссера должно быть от 2 до 100 символов')
-        .isLength({ min: 2, max: 100 }).trim().escape(),
+        .isLength({min: 2, max: 100}).trim().escape(),
 
     body('genre', 'Жанр должен быть от 2 до 200 символов')
-        .optional({ checkFalsy: true })
-        .isLength({ min: 2, max: 200 }).trim(),
+        .optional({checkFalsy: true})
+        .isLength({min: 2, max: 200}).trim(),
 
     body('trailerUrl', 'Ссылка на трейлер должна быть валидным URL')
-        .optional({ checkFalsy: true })
-        .isURL({ protocols: ['http', 'https'], require_protocol: true })
+        .optional({checkFalsy: true})
+        .isURL({protocols: ['http', 'https'], require_protocol: true})
         .trim(),
 
     body('isActive', 'Некорректное значение активности')
-        .optional({ checkFalsy: true })
+        .optional({checkFalsy: true})
         .isIn(['on', 'off']),
 
     body('agerestriction')
-        .exists({ checkFalsy: true }).withMessage('Возрастное ограничение обязательно.')
-        .isInt({ min: 0, max: 18 }).withMessage('Возрастное ограничение должно быть числом от 0 до 18.'),
+        .exists({checkFalsy: true}).withMessage('Возрастное ограничение обязательно.')
+        .isInt({min: 0, max: 18}).withMessage('Возрастное ограничение должно быть числом от 0 до 18.'),
 ];
 
 async function checkMovieDuplicate(movieData, excludeMovieId = null) {
@@ -242,7 +230,6 @@ async function checkMovieDuplicate(movieData, excludeMovieId = null) {
         };
     }
 
-    // Дополнительная проверка: разные названия, но одинаковые оригинальные названия, год и длительность
     if (excludeMovieId) {
         const similarQuery = `
             SELECT movieid, title, originaltitle, releaseyear, durationmin
@@ -310,7 +297,6 @@ const shortVideoValidators = [
         .isLength({ min: 10, max: 1000 }).trim().escape()
 ];
 
-// Валидатор для удаления пользователя
 const deleteUserValidators = [
     body('userId', 'Некорректный ID пользователя')
         .isInt().toInt()
@@ -319,7 +305,6 @@ const deleteUserValidators = [
                 throw new Error('Невозможно удалить собственный аккаунт через панель управления');
             }
 
-            // Проверяем, существует ли пользователь
             const result = await pool.query(
                 'SELECT userid, role FROM users WHERE userid = $1',
                 [value]
@@ -338,7 +323,6 @@ const deleteUserValidators = [
 ];
 
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ВАЛИДАЦИИ ---
 function validateFileUpload(req, fileFieldName) {
     return function(req, res, next) {
         if (!req.file) {
@@ -354,11 +338,9 @@ function validateFileUpload(req, fileFieldName) {
             });
         }
 
-        // Проверка типа файла
         const file = req.file;
         const fileTypeError = validateFileType(file, fileFieldName);
         if (fileTypeError) {
-            // Удаляем загруженный файл если он не подходит
             fs.unlink(file.path, (err) => {
                 if (err) console.error('Ошибка удаления файла:', err);
             });
@@ -383,7 +365,6 @@ function validateFileType(file, fieldName) {
         }
     }
 
-    // Проверка размера файла
     const maxSize = fieldName === 'shortVideoFile' ? 20 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
         return `Максимальный размер файла: ${maxSize / (1024 * 1024)}MB`;
@@ -392,7 +373,6 @@ function validateFileType(file, fieldName) {
     return null;
 }
 
-// --- МАРШРУТЫ ДЛЯ ФИЛЬМОВ ---
 router.get('/add',adminMiddleware, (req, res) => {
     res.render('admin/add', {
         title: 'Добавить новый фильм',
@@ -429,7 +409,6 @@ router.post('/add', adminMiddleware,
 
         if (!errors.isEmpty()) {
             if (req.file && req.file.path) {
-                // Удаляем временный локальный файл при ошибке валидации
                 fs.unlink(req.file.path, (err) => {
                     if (err) console.error('Ошибка удаления файла:', err);
                 });
@@ -441,17 +420,14 @@ router.post('/add', adminMiddleware,
             return res.status(422).redirect('/admin/add');
         }
 
-        // --- ЛОГИКА ЗАГРУЗКИ В ОБЛАКО ---
         const tempPath = req.file.path;
         let finalPosterUrl = null;
-        // --- КОНЕЦ ЛОГИКИ ЗАГРУЗКИ В ОБЛАКО ---
 
         let {
             title, originaltitle, description, durationmin, genre, trailerUrl,
             releaseYear, directorName, price, isActive, agerestriction
         } = req.body;
 
-        // Нормализация жанров
         if (genre) {
             genre = genre
                 .split(',')
@@ -465,7 +441,6 @@ router.post('/add', adminMiddleware,
         try {
             await client.query('BEGIN');
 
-            // Проверка дублирования перед вставкой
             const duplicateCheck = await checkMovieDuplicate({
                 title: title,
                 originaltitle: originaltitle,
@@ -478,11 +453,9 @@ router.post('/add', adminMiddleware,
             }
 
             if (duplicateCheck.isSimilar) {
-                // Можно вывести предупреждение, но не блокировать добавление
                 console.warn('⚠️ Предупреждение о похожем фильме:', duplicateCheck.message);
             }
 
-            // Обработка режиссера
             let directorId;
             let directorResult = await client.query(
                 'SELECT directorid FROM directors WHERE LOWER(name) = LOWER($1)',
@@ -503,14 +476,11 @@ router.post('/add', adminMiddleware,
                 directorId = directorResult.rows[0].directorid;
             }
 
-            // --- ЗАГРУЗКА ФАЙЛА В ОБЛАКО ---
             if (req.file) {
                 const destinationKey = `posters/${req.file.filename}`;
                 finalPosterUrl = await uploadFile(tempPath, destinationKey);
             }
-            // --- КОНЕЦ ЗАГРУЗКИ ---
 
-            // Вставка фильма
             const insertQuery = `
                 INSERT INTO movies (title, originaltitle, description, durationmin,
                     genre, posterurl, trailerurl, releaseyear, directorid, price, agerestriction)
@@ -519,16 +489,14 @@ router.post('/add', adminMiddleware,
 
             await client.query(insertQuery, [
                 title, originaltitle, description, durationmin, genre, finalPosterUrl, trailerUrl,
-                releaseYear, directorId, price, agerestriction // ← $11 - agerestriction
+                releaseYear, directorId, price, agerestriction
             ]);
 
             await client.query('COMMIT');
 
-            // --- УДАЛЕНИЕ ВРЕМЕННОГО ФАЙЛА ПОСЛЕ УСПЕШНОЙ ТРАНЗАКЦИИ ---
             fs.unlink(tempPath, (err) => {
                 if (err) console.error('Ошибка удаления временного файла постера после загрузки в облако:', err);
             });
-            // --- КОНЕЦ УДАЛЕНИЯ ---
 
 
             req.flash('success', `Фильм "${title}" успешно добавлен.`);
@@ -539,7 +507,6 @@ router.post('/add', adminMiddleware,
             console.error('Ошибка добавления фильма:', e);
 
             if (req.file && req.file.path) {
-                // Удаляем временный локальный файл при ошибке БД
                 fs.unlink(req.file.path, (err) => {
                     if (err) console.error('Ошибка удаления файла:', err);
                 });
@@ -562,7 +529,6 @@ router.post('/add', adminMiddleware,
 router.get('/movies/:movieid/edit', adminMiddleware,async (req, res) => {
     const movieId = req.params.movieid;
 
-    // Валидация ID фильма
     if (!movieId || isNaN(parseInt(movieId))) {
         req.flash('error', 'Некорректный ID фильма');
         return res.redirect('/');
@@ -639,7 +605,6 @@ router.post('/movies/:movieid/edit', adminMiddleware,
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             if (req.file && req.file.path) {
-                // Удаляем временный локальный файл при ошибке валидации
                 fs.unlink(req.file.path, (err) => {
                     if (err) console.error('Не удалось удалить загруженный постер после ошибки валидации:', err);
                 });
@@ -655,24 +620,21 @@ router.post('/movies/:movieid/edit', adminMiddleware,
             trailerUrl, releaseYear, directorName, price, isActive, agerestriction
         } = req.body;
 
-        let newPosterUrl = null; // Будет содержать URL из Yandex Cloud или null
+        let newPosterUrl = null;
         let oldPosterPath = null;
-        let tempPath = null; // Путь к временному файлу
+        let tempPath = null;
 
         const client = await pool.connect();
 
         try {
             await client.query('BEGIN');
 
-            // --- ЗАГРУЗКА НОВОГО ПОСТЕРА В ОБЛАКО (если есть) ---
             if (req.file) {
                 tempPath = req.file.path;
                 const destinationKey = `posters/${req.file.filename}`;
                 newPosterUrl = await uploadFile(tempPath, destinationKey);
             }
-            // --- КОНЕЦ ЗАГРУЗКИ ---
 
-            // Проверка существования фильма
             const movieCheck = await client.query(
                 'SELECT movieid, title FROM movies WHERE movieid = $1',
                 [movieId]
@@ -684,7 +646,6 @@ router.post('/movies/:movieid/edit', adminMiddleware,
 
             const originalMovieTitle = movieCheck.rows[0].title;
 
-            // Проверка дублирования при редактировании
             const duplicateCheck = await checkMovieDuplicate({
                 title: title,
                 originaltitle: originaltitle,
@@ -697,11 +658,9 @@ router.post('/movies/:movieid/edit', adminMiddleware,
             }
 
             if (duplicateCheck.isSimilar) {
-                // Можно добавить предупреждение во флеш-сообщение
                 req.flash('warning', duplicateCheck.message);
             }
 
-            // Сохранение старого постера для удаления (если был загружен новый)
             if (newPosterUrl) {
                 const oldMovieResult = await client.query(
                     'SELECT posterurl FROM movies WHERE movieid = $1',
@@ -712,7 +671,6 @@ router.post('/movies/:movieid/edit', adminMiddleware,
                 }
             }
 
-            // Обработка режиссера
             let directorId;
             let directorResult = await client.query(
                 'SELECT directorid FROM directors WHERE LOWER(name) = LOWER($1)',
@@ -733,7 +691,6 @@ router.post('/movies/:movieid/edit', adminMiddleware,
                 directorId = directorResult.rows[0].directorid;
             }
 
-            // Обновление фильма
             const updateQuery = `
                 UPDATE movies 
                 SET title = $1, originaltitle = $2, description = $3, durationmin = $4, genre = $5, 
@@ -748,7 +705,6 @@ router.post('/movies/:movieid/edit', adminMiddleware,
                 releaseYear, directorId, isActive === 'on', price, agerestriction, movieId
             ]);
 
-            // Удаление старого постера (через сервис хранения)
             if (newPosterUrl && oldPosterPath) {
                 deleteFile(oldPosterPath)
                     .catch(e => console.error('Не удалось удалить старый постер через сервис хранения:', e));
@@ -756,18 +712,15 @@ router.post('/movies/:movieid/edit', adminMiddleware,
 
             await client.query('COMMIT');
 
-            // --- УДАЛЕНИЕ ВРЕМЕННОГО ФАЙЛА ПОСЛЕ УСПЕШНОЙ ТРАНЗАКЦИИ ---
             if (tempPath) {
                 fs.unlink(tempPath, (err) => {
                     if (err) console.error('Не удалось удалить временный файл после загрузки в облако:', err);
                 });
             }
-            // --- КОНЕЦ УДАЛЕНИЯ ---
 
 
             const successMessage = `Фильм "${originalMovieTitle}" успешно обновлен на "${title}".`;
 
-            // Добавляем предупреждение о похожих фильмах если есть
             const warning = req.flash('warning')[0];
             if (warning) {
                 req.flash('success', `${successMessage} Внимание: ${warning}`);
@@ -782,7 +735,6 @@ router.post('/movies/:movieid/edit', adminMiddleware,
             console.error('Ошибка обновления фильма:', e);
 
             if (req.file && req.file.path) {
-                // Удаляем временный локальный файл при ошибке БД
                 fs.unlink(req.file.path, (err) => {
                     if (err) console.error('Не удалось удалить загруженный файл после ошибки БД:', err);
                 });
@@ -804,7 +756,6 @@ router.post('/movies/:movieid/edit', adminMiddleware,
 router.post('/movies/:movieid/delete', adminMiddleware, async (req, res) => {
     const movieId = req.params.movieid;
 
-    // Валидация ID фильма
     if (!movieId || isNaN(parseInt(movieId))) {
         req.flash('error', 'Некорректный ID фильма');
         return res.redirect('/');
@@ -823,7 +774,6 @@ router.post('/movies/:movieid/delete', adminMiddleware, async (req, res) => {
 
         const posterUrl = movieResult.rows[0].posterurl;
 
-        // Проверка на наличие активных сеансов
         const activeScreenings = await pool.query(
             `SELECT COUNT(*) FROM screenings WHERE movieid = $1 AND starttime >= NOW() AND iscancelled = FALSE`,
             [movieId]
@@ -833,29 +783,23 @@ router.post('/movies/:movieid/delete', adminMiddleware, async (req, res) => {
             return res.redirect(`/admin/movies/${movieId}/edit`);
         }
 
-        // Удаляем связанные отзывы
         await pool.query('DELETE FROM reviews WHERE movieid = $1', [movieId]);
 
-        // Удаляем связанные короткие видео
         const shortsResult = await pool.query(
             'SELECT videopath FROM shorts WHERE movieid = $1',
             [movieId]
         );
         for (const short of shortsResult.rows) {
             if (short.videopath) {
-                // Используем сервис для удаления файла (Облако или Локальный диск)
                 deleteFile(short.videopath)
                     .catch(e => console.error('Не удалось удалить видео файл через сервис хранения:', e));
             }
         }
         await pool.query('DELETE FROM shorts WHERE movieid = $1', [movieId]);
 
-        // Удаляем фильм
         await pool.query('DELETE FROM movies WHERE movieid = $1', [movieId]);
 
-        // Удаление постера
         if (posterUrl) {
-            // Используем сервис для удаления файла (Облако или Локальный диск)
             deleteFile(posterUrl)
                 .catch(e => console.error('Не удалось удалить постер через сервис хранения:', e));
         }
@@ -870,7 +814,6 @@ router.post('/movies/:movieid/delete', adminMiddleware, async (req, res) => {
     }
 });
 
-// --- МАРШРУТЫ ДЛЯ ПОЛЬЗОВАТЕЛЕЙ ---
 async function getRegularUsers(searchNickname) {
     let query = `
         SELECT 
@@ -899,7 +842,6 @@ async function getRegularUsers(searchNickname) {
 router.get('/users', adminMiddleware, async (req, res) => {
     const searchNickname = req.query.searchNickname ? req.query.searchNickname.trim() : null;
 
-    // Валидация email для поиска
     if (searchNickname && searchNickname.length < 2) {
         req.flash('error', 'Введите корректный nickname для поиска (минимум 2 символа)');
         return res.redirect('/admin/users');
@@ -944,7 +886,6 @@ router.post('/users/delete', adminMiddleware,
         try {
             await client.query('BEGIN');
 
-            // 1. Получаем данные пользователя для уведомлений
             const userResult = await client.query(
                 'SELECT email, firstname, lastname, nickname, telegramid FROM users WHERE userid = $1',
                 [userIdToDelete]
@@ -959,7 +900,6 @@ router.post('/users/delete', adminMiddleware,
             const userName = userData.firstname || userData.nickname || 'Пользователь';
             const userTelegramId = userData.telegramid;
 
-            // 2. Получаем все ОПЛАЧЕННЫЕ билеты пользователя на БУДУЩИЕ сеансы
             const futureTicketsQuery = `
                 SELECT 
                     t.ticketid,
@@ -986,13 +926,11 @@ router.post('/users/delete', adminMiddleware,
 
             const { rows: futureTickets } = await client.query(futureTicketsQuery, [userIdToDelete]);
 
-            // 3. Возвращаем средства за будущие билеты (как у пользователей)
             let refundCount = 0;
-            const refundedTicketsInfo = []; // Для уведомлений
+            const refundedTicketsInfo = [];
             let totalRefund = 0;
 
             for (const ticket of futureTickets) {
-                // Обновляем статус билета
                 await client.query(`
                     UPDATE tickets
                     SET status = 'Возвращен',
@@ -1000,17 +938,15 @@ router.post('/users/delete', adminMiddleware,
                     WHERE ticketid = $1
                 `, [ticket.ticketid]);
 
-                // Создаем запись о возврате (симулированном)
                 const simulatedRefundId = `admin_userdel_rf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-                // Исправляем парсинг суммы - используем totalprice вместо amount если amount NaN
                 let amountInRub;
                 if (ticket.amount && !isNaN(parseFloat(ticket.amount))) {
                     amountInRub = parseFloat(ticket.amount);
                 } else if (ticket.totalprice && !isNaN(parseFloat(ticket.totalprice))) {
                     amountInRub = parseFloat(ticket.totalprice);
                 } else {
-                    amountInRub = 0; // значение по умолчанию
+                    amountInRub = 0;
                 }
 
                 totalRefund += amountInRub;
@@ -1049,7 +985,6 @@ router.post('/users/delete', adminMiddleware,
                 console.log(`✅ Админ: возврат для билета ${ticket.ticketid} (фильм: ${ticket.movie_title}): ${simulatedRefundId}, сумма: ${amountInRub} руб.`);
             }
 
-            // 4. Билеты на ПРОШЕДШИЕ сеансы просто отмечаем как "Административно аннулированы"
             const pastTicketsQuery = `
                 SELECT t.ticketid, s.starttime, m.title as movie_title
                 FROM tickets t
@@ -1073,42 +1008,34 @@ router.post('/users/delete', adminMiddleware,
                 console.log(`ℹ️ Админ: билет ${ticket.ticketid} на прошедший сеанс "${ticket.movie_title}" помечен как аннулированный`);
             }
 
-            // 5. Удаляем сессии пользователя
             await client.query(`
                 DELETE FROM user_sessions WHERE sess->'user'->>'userid' = $1;
             `, [userIdToDelete]);
 
-            // 6. Удаляем отзывы пользователя
             await client.query('DELETE FROM reviews WHERE userid = $1', [userIdToDelete]);
 
-            // 7. Удаляем оценки пользователя
             await client.query('DELETE FROM ratings WHERE userid = $1', [userIdToDelete]);
 
-            // 8. Устанавливаем userid в NULL для билетов пользователя
             await client.query('UPDATE tickets SET userid = NULL WHERE userid = $1', [userIdToDelete]);
 
-            // 9. Устанавливаем user_id в NULL в payment_metadata
             await client.query('UPDATE payment_metadata SET user_id = NULL WHERE user_id = $1', [userIdToDelete]);
 
-            // 10. Удаляем самого пользователя
             const deleteQuery = 'DELETE FROM users WHERE userid = $1';
             const result = await client.query(deleteQuery, [userIdToDelete]);
 
             await client.query('COMMIT');
 
-            // 11. Отправляем уведомления
             let emailSent = false;
             let telegramSent = false;
 
-            // Email уведомление
-            if (userEmail) { // Убрали условие refundCount > 0
+            if (userEmail) {
                 try {
                     console.log('\n📧 Пытаюсь отправить Email уведомление...');
                     const emailResult = await sendAccountBlockedEmail(
                         userEmail,
                         userName,
-                        refundedTicketsInfo, // Может быть пустым массивом
-                        refundCount // Может быть 0
+                        refundedTicketsInfo,
+                        refundCount
                     );
 
                     if (emailResult && emailResult.messageId) {
@@ -1126,8 +1053,7 @@ router.post('/users/delete', adminMiddleware,
                 console.log('❌ Email не отправлен. Причина: email отсутствует у пользователя');
             }
 
-            // Telegram уведомление
-            if (userTelegramId) { // Убрали условие refundCount > 0
+            if (userTelegramId) {
                 try {
                     console.log('\n📱 Пытаюсь отправить Telegram уведомление...');
                     console.log('- Telegram ID:', userTelegramId);
@@ -1137,8 +1063,8 @@ router.post('/users/delete', adminMiddleware,
                     const telegramResult = await sendAccountBlockedNotification(
                         userTelegramId,
                         userName,
-                        refundedTicketsInfo, // Может быть пустым массивом
-                        totalRefund // Может быть 0
+                        refundedTicketsInfo,
+                        totalRefund
                     );
 
                     console.log('Результат отправки Telegram:', telegramResult);
@@ -1211,7 +1137,6 @@ router.post('/reviews/:reviewid/delete', adminMiddleware,
             return res.redirect(referer);
         }
 
-        // Валидация ID отзыва
         if (!reviewId || isNaN(parseInt(reviewId))) {
             req.flash('error', 'Неверный ID отзыва.');
             return res.redirect(referer);
@@ -1222,7 +1147,6 @@ router.post('/reviews/:reviewid/delete', adminMiddleware,
         try {
             await client.query('BEGIN');
 
-            // 1. Получаем информацию об отзыве перед удалением
             const reviewQuery = 'SELECT userid, movieid FROM reviews WHERE reviewid = $1';
             const reviewResult = await client.query(reviewQuery, [reviewId]);
 
@@ -1234,11 +1158,9 @@ router.post('/reviews/:reviewid/delete', adminMiddleware,
 
             const { userid, movieid } = reviewResult.rows[0];
 
-            // 2. Удаляем и отзыв, и связанную оценку
             await client.query('DELETE FROM reviews WHERE reviewid = $1', [reviewId]);
             await client.query('DELETE FROM ratings WHERE movieid = $1 AND userid = $2', [movieid, userid]);
 
-            // 3. Пересчитываем средний рейтинг фильма
             const updateRatingQuery = `
                 WITH AvgRating AS (
                     SELECT ROUND(AVG(ratingvalue)::numeric, 1) AS new_rating_avg
@@ -1254,7 +1176,6 @@ router.post('/reviews/:reviewid/delete', adminMiddleware,
 
             await client.query('COMMIT');
 
-            // Логируем удаление отзыва администратором
             console.log(`Администратор ${req.session.user.userid} удалил отзыв ${reviewId} пользователя ${userid}. Причина: ${reason || 'не указана'}`);
 
             req.flash('success', `Отзыв ID: ${reviewId} успешно удален. Рейтинг фильма обновлен.`);
@@ -1271,12 +1192,11 @@ router.post('/reviews/:reviewid/delete', adminMiddleware,
     }
 );
 
-// 1. GET /admin/edit-director/:directorid? - Рендер страницы добавления/редактирования режиссера
+// GET /admin/edit-director/:directorid? - Рендер страницы добавления/редактирования режиссера
 router.get('/edit-director/:directorid?', adminMiddleware, async (req, res) => {
     const directorId = req.params.directorid;
     const redirectUrl = '/admin/edit-director';
 
-    // Валидация ID режиссера
     if (directorId && (!directorId || isNaN(parseInt(directorId)))) {
         req.flash('error', 'Некорректный ID режиссера');
         return res.redirect(redirectUrl);
@@ -1299,7 +1219,6 @@ router.get('/edit-director/:directorid?', adminMiddleware, async (req, res) => {
             directorData = result.rows[0];
 
             if (directorData.birthdate) {
-                // Форматируем дату для поля input type="date"
                 directorData.birthdate = new Date(directorData.birthdate).toISOString().split('T')[0];
             }
 
@@ -1347,7 +1266,6 @@ router.post('/edit-director/:directorid?', adminMiddleware,
 
         if (!errors.isEmpty()) {
             if (req.file && req.file.path) {
-                // Удаляем временный локальный файл при ошибке валидации
                 fs.unlink(req.file.path, (err) => {
                     if (err) console.error('Не удалось удалить загруженное фото после ошибки валидации:', err);
                 });
@@ -1359,28 +1277,24 @@ router.post('/edit-director/:directorid?', adminMiddleware,
 
         const { name, birthdate, biography, currentPhotourl } = req.body;
 
-        // Для нового режиссера фото обязательно
         if (!isEdit && !req.file) {
             req.flash('error', 'Для добавления нового режиссера необходимо загрузить фото.');
             req.flash('directorData', req.body);
             return res.redirect(redirectUrl);
         }
 
-        let newPhotoUrl = null; // Будет содержать URL из Yandex Cloud или null
+        let newPhotoUrl = null;
         let oldPhotoPath = null;
-        let tempPath = null; // Путь к временному файлу
+        let tempPath = null;
 
         try {
-            // --- ЗАГРУЗКА НОВОГО ФОТО В ОБЛАКО (если есть) ---
             if (req.file) {
                 tempPath = req.file.path;
                 const destinationKey = `directors/${req.file.filename}`;
                 newPhotoUrl = await uploadFile(tempPath, destinationKey);
             }
-            // --- КОНЕЦ ЗАГРУЗКИ ---
 
             if (isEdit) {
-                // Проверка существования режиссера
                 const directorCheck = await pool.query(
                     'SELECT directorid FROM directors WHERE directorid = $1',
                     [directorId]
@@ -1390,7 +1304,6 @@ router.post('/edit-director/:directorid?', adminMiddleware,
                     return res.redirect('/');
                 }
 
-                // Получение старого фото для удаления
                 if (newPhotoUrl) {
                     const oldDirectorResult = await pool.query(
                         'SELECT photourl FROM directors WHERE directorid = $1',
@@ -1408,7 +1321,6 @@ router.post('/edit-director/:directorid?', adminMiddleware,
                 `;
                 await pool.query(updateQuery, [name, biography, birthdate || null, newPhotoUrl, directorId]);
 
-                // Удаление старого фото (через сервис хранения)
                 if (newPhotoUrl && oldPhotoPath) {
                     deleteFile(oldPhotoPath)
                         .catch(e => console.error('Не удалось удалить старое фото режиссера через сервис хранения:', e));
@@ -1416,7 +1328,7 @@ router.post('/edit-director/:directorid?', adminMiddleware,
 
                 req.flash('success', `Режиссер ${name} успешно обновлен.`);
 
-            } else { // New Director
+            } else {
                 const insertQuery = `
                     INSERT INTO directors (name, birthdate, biography, photourl)
                     VALUES ($1, $2, $3, $4) RETURNING directorid;
@@ -1426,13 +1338,11 @@ router.post('/edit-director/:directorid?', adminMiddleware,
                 req.flash('success', `Режиссер ${name} успешно добавлен.`);
             }
 
-            // --- УДАЛЕНИЕ ВРЕМЕННОГО ФАЙЛА ПОСЛЕ УСПЕШНОЙ ТРАНЗАКЦИИ ---
             if (tempPath) {
                 fs.unlink(tempPath, (err) => {
                     if (err) console.error('Не удалось удалить временный файл фото режиссера после загрузки в облако:', err);
                 });
             }
-            // --- КОНЕЦ УДАЛЕНИЯ ---
 
             res.redirect(redirectUrl);
 
@@ -1440,7 +1350,6 @@ router.post('/edit-director/:directorid?', adminMiddleware,
             console.error('Ошибка добавления/обновления режиссера:', e);
 
             if (req.file && req.file.path) {
-                // Удаляем временный локальный файл при ошибке
                 fs.unlink(req.file.path, (err) => {
                     if (err) console.error('Не удалось удалить загруженное фото после ошибки БД:', err);
                 });
@@ -1457,20 +1366,18 @@ router.post('/edit-director/:directorid?', adminMiddleware,
 router.post('/delete-director/:directorid', adminMiddleware, async (req, res) => {
     const directorId = req.params.directorid;
 
-    // Валидация ID режиссера
     if (!directorId || isNaN(parseInt(directorId))) {
         req.flash('error', 'Некорректный ID режиссера');
-        return res.redirect('/admin/directors'); // Предполагаем редирект на список
+        return res.redirect('/admin/directors');
     }
 
     const redirectUrl = `/director/${directorId}`;
 
-    const client = await pool.connect(); // Используем client для транзакции, чтобы обеспечить атомарность
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
 
-        // 1. Получение данных режиссера для удаления фото
         const directorResult = await client.query(
             'SELECT photourl FROM directors WHERE directorid = $1',
             [directorId]
@@ -1484,8 +1391,7 @@ router.post('/delete-director/:directorid', adminMiddleware, async (req, res) =>
 
         const photoUrl = directorResult.rows[0].photourl;
 
-        // 2. Обнуление (Архивация) записи режиссера
-        // Обнуляем все, кроме directorid и name
+
         await client.query(`
             UPDATE directors
             SET biography = NULL,
@@ -1502,17 +1408,13 @@ router.post('/delete-director/:directorid', adminMiddleware, async (req, res) =>
         `, [directorId]);
 
 
-        // 4. Коммит транзакции
         await client.query('COMMIT');
 
 
-        // 5. Удаление файла (ВНЕ транзакции)
         if (photoUrl && !photoUrl.startsWith('http')) {
-            // Исправлен путь: используется path.join для надежности
             const absolutePath = path.join(__dirname, '..', 'public', photoUrl);
             fs.unlink(absolutePath, (err) => {
                 if (err) {
-                    // Логируем ошибку, но не прерываем выполнение, т.к. БД уже обновлена
                     console.error(`Не удалось удалить фото режиссера по пути ${absolutePath}:`, err);
                 } else {
                     console.log(`✅ Фото режиссера успешно удалено: ${photoUrl}`);
@@ -1600,7 +1502,6 @@ router.post('/sessions', adminMiddleware,
             return req.session.save(() => res.redirect('/admin/sessions'));
         }
 
-        // Дополнительная валидация даты
         const requestedStart = new Date(startTime);
         const now = new Date();
 
@@ -1611,7 +1512,6 @@ router.post('/sessions', adminMiddleware,
         }
 
         try {
-            // 1. Получаем длительность фильма
             const { rows: movieInfo } = await pool.query(
                 'SELECT durationmin, title FROM movies WHERE movieid = $1',
                 [movieId]
@@ -1626,21 +1526,18 @@ router.post('/sessions', adminMiddleware,
             const movieTitle = movieInfo[0].title;
             const newSessionFullDurationMs = (newMovieDurationMin * 60000) + CLEANING_TIME_MS;
 
-            // --- ПОДГОТОВКА ДАТ ---
             const dayStart = new Date(requestedStart);
             dayStart.setHours(DAY_START_HOUR, 0, 0, 0);
 
             const dayEndLimit = new Date(requestedStart);
             dayEndLimit.setHours(LATEST_START_HOUR, 0, 0, 0);
 
-            // Проверка на выход за границы рабочего дня
             if (requestedStart.getTime() > dayEndLimit.getTime() || requestedStart.getTime() < dayStart.getTime()) {
                 req.flash('error', `Сеанс должен начинаться в рабочее время (${DAY_START_HOUR}:00 - ${LATEST_START_HOUR}:00).`);
                 req.flash('formData', req.body);
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // 2. Проверяем, не слишком ли поздно начинается сеанс
             const latestPossibleStart = new Date(dayEndLimit.getTime() - newSessionFullDurationMs);
             if (requestedStart.getTime() > latestPossibleStart.getTime()) {
                 req.flash('error', `Фильм "${movieTitle}" слишком длинный (${newMovieDurationMin} мин) для начала в ${requestedStart.getHours()}:${requestedStart.getMinutes().toString().padStart(2, '0')}.`);
@@ -1648,7 +1545,6 @@ router.post('/sessions', adminMiddleware,
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // 3. ПОЛУЧАЕМ ВСЕ СУЩЕСТВУЮЩИЕ СЕАНСЫ НА ЭТОТ ДЕНЬ
             const allSessionsQuery = `
                 SELECT 
                     s.screeningid,
@@ -1675,7 +1571,6 @@ router.post('/sessions', adminMiddleware,
                 [hallId, searchDayStart.toISOString(), searchDayEnd.toISOString()]
             );
 
-            // 4. ПРОВЕРКА КОНФЛИКТА
             let collisionFound = false;
             let conflictingMovie = '';
 
@@ -1691,7 +1586,6 @@ router.post('/sessions', adminMiddleware,
                 }
             }
 
-            // --- ЕСЛИ ЕСТЬ КОНФЛИКТ, ЗАПУСКАЕМ ГЛОБАЛЬНЫЙ ПОИСК ОКОН ---
             if (collisionFound) {
                 let suggestions = [];
                 let slotsFoundCount = 0;
@@ -1776,7 +1670,6 @@ router.post('/sessions', adminMiddleware,
                 return req.session.save(() => res.redirect('/admin/sessions'));
             }
 
-            // === СОЗДАЕМ СЕАНС ===
             const insertQuery = `
                 INSERT INTO screenings (movieid, hallid, starttime)
                 VALUES ($1, $2, $3)
@@ -1809,7 +1702,6 @@ router.post('/sessions', adminMiddleware,
 router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
     const screeningId = req.params.id;
 
-    // Валидация ID сеанса
     if (!screeningId || isNaN(parseInt(screeningId))) {
         req.flash('error', 'Некорректный ID сеанса');
         return res.redirect('/admin/sessions');
@@ -1820,7 +1712,6 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Получаем информацию о сеансе
         const screeningInfo = await client.query(`
             SELECT 
                 s.*, 
@@ -1845,7 +1736,6 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
 
         const screening = screeningInfo.rows[0];
 
-        // Проверяем, не начался ли уже сеанс
         const now = new Date();
         const startTime = new Date(screening.starttime);
 
@@ -1855,7 +1745,6 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
             return req.session.save(() => res.redirect('/admin/sessions'));
         }
 
-        // 2. Получаем ОПЛАЧЕННЫЕ билеты на этот БУДУЩИЙ сеанс
         const ticketsQuery = `
             SELECT 
                 t.ticketid,
@@ -1883,7 +1772,6 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
 
         const { rows: tickets } = await client.query(ticketsQuery, [screeningId]);
 
-        // 3. Отменяем сеанс
         const cancelQuery = `
             UPDATE screenings 
             SET iscancelled = TRUE 
@@ -1893,13 +1781,11 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
 
         await client.query(cancelQuery, [screeningId]);
 
-        // 4. Для каждого ОПЛАЧЕННОГО билета делаем возврат
         let refundCount = 0;
-        const notifiedUsers = new Set(); // Для отслеживания уведомленных пользователей (по UserID)
-        let totalRefundedAmount = 0; // Для общей статистики
+        const notifiedUsers = new Set();
+        let totalRefundedAmount = 0;
 
         for (const ticket of tickets) {
-            // Обновляем статус билета
             await client.query(`
                 UPDATE tickets
                 SET status = 'Возвращен',
@@ -1907,19 +1793,16 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
                 WHERE ticketid = $1
             `, [ticket.ticketid]);
 
-            // Создаем запись о возврате (симулированном)
             const simulatedRefundId = `admin_screening_rf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-            // --- ДОБАВЛЕНА ПРОВЕРКА СУММЫ ---
             let amountInRub;
             if (ticket.amount && !isNaN(parseFloat(ticket.amount))) {
                 amountInRub = parseFloat(ticket.amount);
             } else if (ticket.totalprice && !isNaN(parseFloat(ticket.totalprice))) {
                 amountInRub = parseFloat(ticket.totalprice);
             } else {
-                amountInRub = 0; // значение по умолчанию
+                amountInRub = 0;
             }
-            // --- КОНЕЦ ПРОВЕРКИ СУММЫ ---
 
             totalRefundedAmount += amountInRub;
 
@@ -1948,12 +1831,8 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
 
             refundCount++;
 
-            // --- 📢 ОТПРАВКА УВЕДОМЛЕНИЙ (Telegram И Email) ---
-
-            // Получаем подходящее имя для письма/сообщения
             const userName = ticket.firstname || ticket.nickname || ticket.user_email.split('@')[0] || 'Клиент';
 
-            // Если пользователь еще не был уведомлен
             if (!notifiedUsers.has(ticket.userid)) {
 
                 const screeningDetails = {
@@ -1962,10 +1841,8 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
                     starttime: screening.starttime
                 };
 
-                // 1. Telegram
                 if (ticket.telegramid && ticket.enablenotifications) {
                     try {
-                        // Предполагается, что эта функция использует amountInRub
                         await sendScreeningCancellationNotification(
                             ticket.telegramid,
                             screeningDetails,
@@ -1977,7 +1854,6 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
                     }
                 }
 
-                // 2. Email (НОВАЯ ИНТЕГРАЦИЯ)
                 if (ticket.user_email) {
                     try {
                         await sendScreeningCancellationEmail(
@@ -1992,15 +1868,12 @@ router.post('/sessions/:id/cancel', adminMiddleware, async (req, res) => {
                     }
                 }
 
-                // Помечаем пользователя как уведомленного, чтобы избежать дублирования
                 notifiedUsers.add(ticket.userid);
             }
 
-            // Логируем для администратора
             console.log(`✅ Админ: возврат для билета ${ticket.ticketid} пользователя ${ticket.user_email}: ${simulatedRefundId}`);
         }
 
-        // 5. Забронированные (но не оплаченные) билеты просто отменяем
         const reservedTicketsQuery = `
             SELECT ticketid, userid
             FROM tickets 
@@ -2090,11 +1963,9 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
 
         const { rows: reportData } = await pool.query(reportQuery);
 
-        // Создаем Excel workbook
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Сеансы');
 
-        // Добавляем заголовки
         worksheet.columns = [
             { header: 'ID сеанса', key: 'id', width: 10 },
             { header: 'Фильм', key: 'movie', width: 30 },
@@ -2108,7 +1979,6 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
             { header: 'Общая выручка', key: 'revenue', width: 15, style: { numFmt: '#,##0.00' } }
         ];
 
-        // Добавляем данные
         reportData.forEach(row => {
             worksheet.addRow({
                 id: row["ID_сеанса"],
@@ -2124,7 +1994,6 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
             });
         });
 
-        // Добавляем итоги
         const totalRow = reportData.length + 2;
         worksheet.mergeCells(`A${totalRow}:H${totalRow}`);
 
@@ -2135,7 +2004,6 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
         worksheet.getCell(`A${totalRow}`).font = { bold: true };
         worksheet.getCell(`A${totalRow}`).alignment = { horizontal: 'right' };
 
-        // Форматируем заголовки
         const headerRow = worksheet.getRow(1);
         headerRow.font = { bold: true, size: 12 };
         headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -2145,7 +2013,6 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
             fgColor: { argb: 'FFE0E0E0' }
         };
 
-        // Добавляем границы
         worksheet.eachRow({ includeEmpty: false }, (row) => {
             row.eachCell({ includeEmpty: false }, (cell) => {
                 cell.border = {
@@ -2158,7 +2025,6 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
             });
         });
 
-        // Автонастройка ширины столбцов
         worksheet.columns.forEach(column => {
             let maxLength = 0;
             column.eachCell({ includeEmpty: false }, (cell) => {
@@ -2218,7 +2084,6 @@ router.post('/add-short', adminMiddleware,
                 req.flash('formData', req.body);
                 return res.redirect('/admin/add-short');
             }
-            // Файл обязателен, проверяем его наличие
             if (!req.file) {
                 req.flash('error', 'Видеофайл обязателен для добавления');
                 req.flash('formData', req.body);
@@ -2232,7 +2097,6 @@ router.post('/add-short', adminMiddleware,
         const errors = validationResult(req);
         const { movieId, title, durationsec, description } = req.body;
 
-        // Если валидация не прошла, удаляем временный файл
         if (!errors.isEmpty()) {
             if (req.file && req.file.path) {
                 fs.unlink(req.file.path, (err) => {
@@ -2246,16 +2110,14 @@ router.post('/add-short', adminMiddleware,
         }
 
         const client = await pool.connect();
-        const tempPath = req.file.path; // Save temporary path
+        const tempPath = req.file.path;
         let videoUrl = null;
 
         try {
             await client.query('BEGIN');
 
-            // --- UPLOAD TO YANDEX CLOUD ---
             const destinationKey = `shorts/${req.file.filename}`;
-            videoUrl = await uploadFile(tempPath, destinationKey); // Upload to YC
-            // --- END UPLOAD ---
+            videoUrl = await uploadFile(tempPath, destinationKey);
 
             const insertQuery = `
                 INSERT INTO shorts (movieid, title, videopath, durationsec)
@@ -2267,7 +2129,6 @@ router.post('/add-short', adminMiddleware,
 
             await client.query('COMMIT');
 
-            // Clean up temporary file after successful transaction
             fs.unlink(tempPath, (err) => {
                 if (err) console.error('Ошибка удаления временного видеофайла после загрузки в облако:', err);
             });
@@ -2279,7 +2140,7 @@ router.post('/add-short', adminMiddleware,
             await client.query('ROLLBACK');
             console.error('Ошибка добавления короткого видео:', e);
 
-            if (req.file && req.file.path) { // Clean up temp file on failure
+            if (req.file && req.file.path) {
                 fs.unlink(req.file.path, (err) => {
                     if (err) console.error('Ошибка удаления временного видеофайла после ошибки БД:', err);
                 });
@@ -2296,7 +2157,7 @@ router.post('/add-short', adminMiddleware,
 
 router.post('/shorts/:shortid/delete',adminMiddleware, async (req, res) => {
     const shortId = req.params.shortid;
-    const redirectUrl = '/admin/shorts'; // Предполагаемый список коротких видео
+    const redirectUrl = '/admin/shorts';
 
     if (!shortId || isNaN(parseInt(shortId))) {
         req.flash('error', 'Некорректный ID короткого видео.');
@@ -2308,7 +2169,6 @@ router.post('/shorts/:shortid/delete',adminMiddleware, async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Получаем путь к файлу для удаления
         const result = await client.query(
             'SELECT videopath FROM shorts WHERE shortid = $1',
             [shortId]
@@ -2327,10 +2187,8 @@ router.post('/shorts/:shortid/delete',adminMiddleware, async (req, res) => {
         await client.query('COMMIT');
 
         if (videoPath) {
-            // Используем сервис для удаления файла (Облако или Локальный диск)
             deleteFile(videoPath)
                 .catch(e => {
-                    // Логируем, но не прерываем, т.к. запись в БД уже удалена
                     console.error(`❌ Ошибка удаления файла ${videoPath} через сервис хранения:`, e);
                 });
         }

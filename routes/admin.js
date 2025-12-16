@@ -1401,12 +1401,6 @@ router.post('/delete-director/:directorid', adminMiddleware, async (req, res) =>
         `, [directorId]);
 
 
-        await client.query(`
-            UPDATE movies
-            SET directorid = NULL
-            WHERE directorid = $1
-        `, [directorId]);
-
 
         await client.query('COMMIT');
 

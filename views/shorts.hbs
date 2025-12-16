@@ -303,7 +303,7 @@
                     <p class="movie-link">К фильму: <a href="${movieLinkUrl}">${short.movie_title}</a></p>
                 </div>
                 {{#if isAdmin}}
-                <form action="/admin/shorts/${short.shortid}?${deleteRedirectParam}/delete" method="POST" class="delete-short-form"
+                <form action="/admin/shorts/${short.shortid}/delete" method="POST" class="delete-short-form"
                           onsubmit="return confirm('Вы уверены, что хотите удалить шортс \\'${short.short_title}\\'?');">
                         <button type="submit" class="btn-delete-short" title="Удалить короткое видео">
                             <span class="icon">🗑️</span>

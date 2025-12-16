@@ -115,54 +115,5 @@ module.exports = {
     // Хелпер AND (логическое И)
     and: function(v1, v2) {
         return v1 && v2;
-    },
-
-    // Хелпер для проверки true
-    isTrue: function(value) {
-        return value === true;
-    },
-
-    // Хелпер для проверки false
-    isFalse: function(value) {
-        return value === false;
-    },
-
-    // Хелпер для условного отображения с OR
-    ifOr: function(v1, v2, options) {
-        if (v1 || v2) {
-            return options.fn(this);
-        }
-        return options.inverse(this);
-    },
-
-    // Хелпер для условного отображения с AND
-    ifAnd: function(v1, v2, options) {
-        if (v1 && v2) {
-            return options.fn(this);
-        }
-        return options.inverse(this);
-    },
-
-    // Хелпер для условного отображения с NOT
-    ifNot: function(value, options) {
-        if (!value) {
-            return options.fn(this);
-        }
-        return options.inverse(this);
-    },
-
-    // Простой хелпер для проверки на null/undefined
-    isDefined: function(value) {
-        return value !== null && value !== undefined;
-    },
-
-    // Хелпер для проверки пустоты массива
-    isEmpty: function(array) {
-        return !array || array.length === 0;
-    },
-
-    // Хелпер для проверки непустоты массива
-    isNotEmpty: function(array) {
-        return array && array.length > 0;
     }
 };

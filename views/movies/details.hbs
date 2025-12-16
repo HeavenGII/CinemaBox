@@ -10,7 +10,6 @@
             {{/if}}
         </div>
 
-
         <div class="movie-info">
             <div class="movie-title-group">
                 <h1>{{movie.title}} ({{movie.releaseyear}})</h1>
@@ -25,13 +24,14 @@
                 <p><strong>Жанр:</strong> {{movie.genre}}</p>
                 <p><strong>Режиссер:</strong> <a href="/director/{{movie.directorid}}" class="director-link">{{movie.directorname}}</a></p>
                 <p><strong>Продолжительность:</strong> {{formatDuration movie.durationmin}}</p>
+
+                <!-- ПЕРЕМЕЩАЕМ ЦЕНУ СЮДА -->
+                {{#if movie.price}}
+                    <p><strong>Базовая цена билета:</strong> <span class="price-text">{{movie.price}} BYN</span></p>
+                {{/if}}
             </div>
-            {{#if firstUpcomingScreening}}
-            <!-- БЛОК С ЦЕНОЙ -->
-            <div class="price-info">
-                Базовая цена билета: <span>{{movie.price}} BYN</span>
-            </div>
-            {{/if}}
+
+            <!-- БЛОК С ЦЕНОЙ УДАЛЕН ОТСЮДА -->
 
             <!-- НОВЫЙ БЛОК ДЛЯ СТОРОННИХ РЕЙТИНГОВ -->
             <div class="external-ratings-block" data-movie-title="{{movie.title}}" data-movie-year="{{movie.releaseyear}}">
@@ -367,14 +367,12 @@
         border-bottom-color: #e50914; /* Красная полоса при наведении */
     }
 
-    .price-info {
-        font-size: 1.3rem;
-        margin: 30px 0;
-        padding: 15px;
-        border: 1px solid #e50914;
-        border-radius: 4px;
-        display: inline-block;
+    .meta-data .price-text {
+        color: #e50914;
+        font-weight: bold;
+        font-size: 1.2rem;
     }
+    
     .price-info span {
         font-weight: bold;
         color: #e50914;

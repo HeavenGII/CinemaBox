@@ -1,4 +1,3 @@
-// services/simple-storage-service.js
 const axios = require('axios');
 const crypto = require('crypto');
 const fs = require('fs');

@@ -8,7 +8,6 @@ const crypto = require('crypto');
 
 router.use(authMiddleware);
 
-// --- ВАЛИДАТОРЫ ДЛЯ ПОЛЬЗОВАТЕЛЬСКИХ РОУТОВ ---
 const profileUpdateValidators = [
     body('nickname', 'Никнейм должен быть от 2 до 30 символов')
         .isLength({ min: 2, max: 30 }).trim().escape()
@@ -63,7 +62,6 @@ const deleteAccountValidators = [
 
 
 
-// --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
 function validateTicketOwnership(ticketId, userId) {
     return pool.query(
         'SELECT ticketid FROM tickets WHERE ticketid = $1 AND userid = $2',
@@ -76,7 +74,6 @@ function validateScreeningTime(startTime, cancellationDeadlineMinutes = 120) {
     return new Date() <= deadline;
 }
 
-// --- РОУТЫ ---
 
 // GET /profile - Рендер страницы профиля
 router.get('/', async (req, res) => {

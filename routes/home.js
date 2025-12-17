@@ -46,8 +46,7 @@ router.get('/', async (req, res) => {
 
     const isFilterApplied = !!(searchTitle || filterYear || filterGenre || filterMinRating);
 
-    // НОВАЯ ПЕРЕМЕННАЯ: показывать ли только активные фильмы
-    const showOnlyActive = !isFilterApplied; // Только на главной без фильтров
+    const showOnlyActive = !isFilterApplied;
 
     let queryParams = [];
     let whereConditions = [];
@@ -95,12 +94,10 @@ router.get('/', async (req, res) => {
             FROM movies m
         `;
 
-        // ВАЖНО: добавляем условие isactive = true только если НЕТ фильтров
         if (showOnlyActive) {
             whereConditions.push(`m.isactive = true`);
         }
 
-        // Остальные условия как обычно
         if (searchTitle) {
             whereConditions.push(`m.title ILIKE $${paramCounter}`);
             queryParams.push(`%${searchTitle}%`);
@@ -129,7 +126,6 @@ router.get('/', async (req, res) => {
             baseQuery += ' WHERE ' + whereConditions.join(' AND ');
         }
 
-        // Сортировка
         if (isFilterApplied) {
             baseQuery += ` ORDER BY m.ratingavg DESC, m.releaseyear DESC`;
         } else {
@@ -152,14 +148,11 @@ router.get('/', async (req, res) => {
             isactive: m.isactive
         }));
 
-        // Hero movie должен быть активным всегда
         if (currentMovies.length > 0) {
-            // Ищем активный фильм для heroMovie
             const activeMovies = currentMovies.filter(m => m.isactive);
             if (activeMovies.length > 0) {
                 heroMovie = activeMovies[Math.floor(Math.random() * activeMovies.length)];
             } else {
-                // Если нет активных, берем первый из результатов
                 heroMovie = currentMovies[0];
             }
 
@@ -182,7 +175,7 @@ router.get('/', async (req, res) => {
             filterGenre,
             filterMinRating,
             isFilterApplied,
-            showOnlyActive, // Передаем в шаблон
+            showOnlyActive,
 
             currentYear: new Date().getFullYear(),
             isHome: true

@@ -428,7 +428,6 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
     }
 
     try {
-        // 1. Получаем ВСЕ будущие сеансы для фильма
         const allScreeningsQuery = `
             SELECT
                 s.screeningid, s.starttime,
@@ -454,7 +453,6 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
         const firstScreening = allScreenings[0];
         const initialScreeningId = firstScreening.screeningid;
 
-        // 2. Получаем забронированные места для ПЕРВОГО сеанса
         const bookedSeatsQuery = `
             SELECT rownum, seatnum
             FROM tickets
@@ -463,11 +461,9 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
         const { rows: bookedSeats } = await pool.query(bookedSeatsQuery, [initialScreeningId]);
         const bookedSeatKeys = bookedSeats.map(seat => `${seat.rownum}-${seat.seatnum}`);
 
-        // 3. Группировка сеансов по дню ❗ НОВОЕ
         const groupedScreenings = allScreenings.reduce((acc, scr) => {
             const dateISO = scr.starttime.toISOString();
 
-            // Получаем метку дня ('Сегодня', 'Завтра', 'ДД Месяц')
             const dayLabel = getScreeningDayLabel(dateISO);
 
             if (!acc[dayLabel]) {
@@ -479,9 +475,7 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
 
             acc[dayLabel].screenings.push({
                 id: scr.screeningid,
-                // Форматируем ТОЛЬКО время для кнопки
                 startTime: formatDate(dateISO, 'HH:mm'),
-                // Форматируем полную дату для сводки
                 fullDisplayTime: formatDate(dateISO, 'DD.MM. HH:mm'),
                 hall: scr.hallname,
                 basePrice: parseFloat(scr.baseprice)
@@ -490,11 +484,8 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
             return acc;
         }, {});
 
-        // Преобразуем объект сгруппированных данных обратно в массив для итерации на фронтенде
         const jsScreeningsGrouped = Object.values(groupedScreenings);
 
-
-        // 4. Форматируем данные для передачи в Handlebars/JS
         const initialSeatData = {
             id: initialScreeningId,
             movieTitle: firstScreening.movietitle,
@@ -503,7 +494,6 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
             seatsPerRow: firstScreening.seatsperrow,
             basePrice: parseFloat(firstScreening.baseprice),
             bookedSeatKeys: bookedSeatKeys,
-            // Передаем полную дату для начальной сводки
             startTime: formatDate(firstScreening.starttime.toISOString(), 'DD.MM. HH:mm'),
         };
 
@@ -513,7 +503,7 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
             movieTitle: firstScreening.movietitle,
             movieId: movieId,
             initialData: JSON.stringify({
-                screenings: jsScreeningsGrouped, // ❗ Передаем сгруппированные данные
+                screenings: jsScreeningsGrouped,
                 initialSeatData: initialSeatData
             }),
             isAuthenticated: !!req.session.user

@@ -180,11 +180,24 @@ const movieValidators = [
         .isFloat({min: 0, max: 10000}).toFloat(),
 
     body('directorName', 'Имя режиссера должно быть от 2 до 100 символов')
-        .isLength({min: 2, max: 100}).trim().escape(),
+        .isLength({min: 2, max: 100}).trim().escape()
+        .custom((value) => {
+            if (value.includes(',')) {
+                throw new Error('Имя режиссера не должно содержать запятую. Введите только одного режиссера.');
+            }
+            return true;
+        }),
 
     body('genre', 'Жанр должен быть от 2 до 200 символов')
         .optional({checkFalsy: true})
-        .isLength({min: 2, max: 200}).trim(),
+        .isLength({min: 2, max: 200}).trim()
+        .customSanitizer((value) => {
+            if (value) {
+                return value.toLowerCase();
+            }
+            return value;
+        }),
+
 
     body('trailerUrl', 'Ссылка на трейлер должна быть валидным URL')
         .optional({checkFalsy: true})
@@ -456,6 +469,10 @@ router.post('/add', adminMiddleware,
                 console.warn('⚠️ Предупреждение о похожем фильме:', duplicateCheck.message);
             }
 
+            if (directorName.includes(',')) {
+                throw new Error('Имя режиссера не должно содержать запятую. Введите только одного режиссера.');
+            }
+
             let directorId;
             let directorResult = await client.query(
                 'SELECT directorid FROM directors WHERE LOWER(name) = LOWER($1)',
@@ -475,6 +492,7 @@ router.post('/add', adminMiddleware,
                 );
                 directorId = directorResult.rows[0].directorid;
             }
+
 
             if (req.file) {
                 const destinationKey = `posters/${req.file.filename}`;
@@ -672,6 +690,11 @@ router.post('/movies/:movieid/edit', adminMiddleware,
             }
 
             let directorId;
+
+            if (directorName.includes(',')) {
+                throw new Error('Имя режиссера не должно содержать запятую. Введите только одного режиссера.');
+            }
+
             let directorResult = await client.query(
                 'SELECT directorid FROM directors WHERE LOWER(name) = LOWER($1)',
                 [directorName]

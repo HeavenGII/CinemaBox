@@ -8,7 +8,6 @@ const YooKassa = require('yookassa');
 
 const router = Router();
 
-// ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ С БОЛЕЕ ИНФОРМАТИВНЫМИ СООБЩЕНИЯМИ
 if (!process.env.YOO_KASSA_SECRET_KEY) {
     console.error("⛔️ КРИТИЧЕСКАЯ ОШИБКА: Переменная окружения YOO_KASSA_SECRET_KEY не установлена!");
     console.error("Добавьте в .env: YOO_KASSA_SECRET_KEY=ваш_секретный_ключ");
@@ -19,7 +18,6 @@ if (!process.env.YOO_KASSA_SHOP_ID) {
     console.error("Добавьте в .env: YOO_KASSA_SHOP_ID=ваш_shop_id");
 }
 
-// Инициализация YooKassa только если переменные существуют
 let yookassa;
 if (process.env.YOO_KASSA_SECRET_KEY && process.env.YOO_KASSA_SHOP_ID) {
     try {
@@ -36,14 +34,12 @@ if (process.env.YOO_KASSA_SECRET_KEY && process.env.YOO_KASSA_SHOP_ID) {
 }
 
 const MOCK_EXCHANGE_RATES = {
-    'BYN': 28.00 // Исправленный курс: 1 BYN = 28.00 RUB (было 23.61)
+    'BYN': 28.00
 };
 
 async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymentId) {
-    // --- ЛОГИРОВАНИЕ ---
     console.log(`[DB Action] Попытка создания билетов. Получен userId: ${userId || 'NULL'}`);
     console.log(`[DB Action] Payment ID: ${paymentId}, YooKassa Payment ID: ${yookassaPaymentId}`);
-    // ----------------------------
 
     if (!pool || typeof pool.query !== 'function') {
         console.error("[DB Action] КРИТИЧЕСКАЯ ОШИБКА: Объект 'pool' БД не определен.");
@@ -131,7 +127,6 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
             tokensToInsert
         ]);
 
-        // Сохраняем связь между платежом и билетами
         for (let i = 0; i < result.rows.length; i++) {
             const ticketId = result.rows[i].ticketid;
             const qrToken = result.rows[i].qrtoken;
@@ -155,7 +150,7 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
                 yookassaPaymentId,
                 `order_${Date.now()}_${ticketId}`,
                 userId,
-                priceInRub, // Исправлено: умножаем на курс
+                priceInRub,
                 'RUB',
                 'succeeded',
                 qrToken
@@ -176,7 +171,6 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
 }
 
 router.post('/place-order', authMiddleware, async (req, res) => {
-    // Проверяем, инициализирован ли YooKassa
     if (!yookassa) {
         console.error("❌ YooKassa не инициализирован! Проверьте переменные окружения.");
         return res.status(500).json({

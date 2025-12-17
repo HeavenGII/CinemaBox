@@ -16,21 +16,292 @@
             ⚠️ Это действие необратимо. При удалении аккаунта, все ваши данные, включая **купленные билеты**, **оценки** и **отзывы**, будут навсегда удалены из системы.
         </p>
 
+        {{#if hasActiveTickets}}
+            <div class="alert alert-warning">
+                <p><strong>Внимание!</strong> У вас есть активные билеты на будущие сеансы:</p>
+                <ul>
+                    <li>Все оплаченные билеты будут автоматически возвращены</li>
+                    <li>Средства поступят на вашу карту в течение 1-10 рабочих дней</li>
+                    <li>Все бронирования будут отменены</li>
+                </ul>
+            </div>
+        {{/if}}
+
         <div class="delete-info">
-            <p><strong>Аккаунт для удаления:</strong> <span>{{userEmail}}</span></p>
+            <p><strong>Аккаунт для удаления:</strong> <span class="highlight">{{userEmail}} ({{userNickname}})</span></p>
         </div>
 
         <form action="/profile/delete" method="POST" class="delete-form">
             <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
-            <p>Чтобы подтвердить удаление, нажмите кнопку ниже:</p>
+            <!-- 1. Поле для подтверждения email -->
+            <div class="form-group">
+                <label for="confirmEmail">Подтвердите ваш email *</label>
+                <input
+                        type="email"
+                        id="confirmEmail"
+                        name="confirmEmail"
+                        value="{{formData.confirmEmail}}"
+                        placeholder="Введите ваш email для подтверждения"
+                        required
+                        class="{{#if (lookup errors 'confirmEmail')}}error-field{{/if}}"
+                >
+                {{#if (lookup errors 'confirmEmail')}}
+                    <span class="error-message">{{lookup errors 'confirmEmail'}}</span>
+                {{/if}}
+                <small class="form-hint">Для подтверждения введите ваш текущий email: <strong>{{userEmail}}</strong></small>
+            </div>
 
-            <button type="submit" class="btn delete-confirm-btn"
-                    onclick="return confirm('Вы действительно уверены? Это действие нельзя отменить.')">
-                Да, удалить мой аккаунт
-            </button>
+            <!-- 2. Чекбокс подтверждения -->
+            <div class="form-group checkbox-group">
+                <input
+                        type="checkbox"
+                        id="confirmDelete"
+                        name="confirmDelete"
+                        {{#if formData.confirmDelete}}checked{{/if}}
+                        class="{{#if (lookup errors 'confirmDelete')}}error-field{{/if}}"
+                >
+                <label for="confirmDelete">
+                    <strong>Я понимаю, что это действие необратимо</strong> и все мои данные будут безвозвратно удалены.
+                </label>
+                {{#if (lookup errors 'confirmDelete')}}
+                    <span class="error-message">{{lookup errors 'confirmDelete'}}</span>
+                {{/if}}
+            </div>
 
-            <a href="/profile" class="btn btn-secondary cancel-delete-btn">Отмена, вернуться в Профиль</a>
+            <!-- 3. Кнопки -->
+            <div class="form-actions">
+                <button type="submit" class="btn delete-confirm-btn">
+                    Да, удалить мой аккаунт
+                </button>
+                <a href="/profile" class="btn btn-secondary cancel-delete-btn">
+                    Отмена, вернуться в Профиль
+                </a>
+            </div>
+
+            <!-- 4. Дополнительное предупреждение -->
+            <div class="final-warning">
+                <p>⚠️ <strong>Последнее предупреждение:</strong> После удаления:</p>
+                <ul>
+                    <li>Вы не сможете восстановить аккаунт</li>
+                    <li>Все ваши отзывы и рейтинги будут удалены</li>
+                    <li>История покупок будет стерта</li>
+                    <li>Войти с этим email будет невозможно</li>
+                </ul>
+            </div>
         </form>
     </div>
 </div>
+
+<style>
+    .delete-confirmation-area {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: #252525;
+        border-radius: 12px;
+        border: 1px solid #333;
+    }
+
+    .warning-text {
+        background: rgba(209, 34, 41, 0.1);
+        border-left: 4px solid #D12229;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        border-radius: 4px;
+    }
+
+    .delete-info {
+        background: #333;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1.5rem 0;
+    }
+
+    .delete-info .highlight {
+        color: #D12229;
+        font-weight: bold;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #f0f0f0;
+    }
+
+    .form-group input[type="email"],
+    .form-group input[type="text"] {
+        width: 100%;
+        padding: 0.75rem;
+        background: #333;
+        border: 1px solid #444;
+        border-radius: 6px;
+        color: #f0f0f0;
+        font-size: 1rem;
+    }
+
+    .form-group input.error-field {
+        border-color: #D12229;
+        background: rgba(209, 34, 41, 0.1);
+    }
+
+    .error-message {
+        color: #D12229;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    .form-hint {
+        font-size: 0.875rem;
+        color: #888;
+        margin-top: 0.25rem;
+        display: block;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: rgba(209, 34, 41, 0.05);
+        border-radius: 8px;
+        border: 1px solid #444;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        margin-top: 0.25rem;
+        width: 18px;
+        height: 18px;
+    }
+
+    .checkbox-group label {
+        margin: 0;
+        font-size: 0.95rem;
+        line-height: 1.4;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+
+    .delete-confirm-btn {
+        background: #D12229;
+        color: white;
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        flex: 1;
+        transition: background 0.2s;
+    }
+
+    .delete-confirm-btn:hover {
+        background: #ff4d4d;
+    }
+
+    .cancel-delete-btn {
+        background: #444;
+        color: white;
+        text-decoration: none;
+        padding: 0.75rem 2rem;
+        border-radius: 6px;
+        text-align: center;
+        flex: 1;
+        transition: background 0.2s;
+    }
+
+    .cancel-delete-btn:hover {
+        background: #555;
+    }
+
+    .final-warning {
+        background: rgba(209, 34, 41, 0.15);
+        border: 1px solid #D12229;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+
+    .final-warning ul {
+        margin: 0.5rem 0 0 1.5rem;
+        padding: 0;
+    }
+
+    .final-warning li {
+        margin: 0.25rem 0;
+        color: #ccc;
+    }
+
+    .alert-warning {
+        background: rgba(255, 193, 7, 0.1);
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin: 1.5rem 0;
+        border-radius: 4px;
+    }
+
+    .alert-warning strong {
+        color: #ffc107;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteForm = document.querySelector('.delete-form');
+        const confirmCheckbox = document.getElementById('confirmDelete');
+        const emailInput = document.getElementById('confirmEmail');
+        const deleteBtn = document.querySelector('.delete-confirm-btn');
+        const userEmail = '{{userEmail}}'; // Email пользователя из шаблона
+
+        function validateForm() {
+            const emailMatches = emailInput.value.trim() === userEmail;
+            const checkboxChecked = confirmCheckbox.checked;
+
+            deleteBtn.disabled = !(emailMatches && checkboxChecked);
+
+            if (emailInput.value.trim() && !emailMatches) {
+                emailInput.classList.add('error-field');
+                emailInput.title = 'Email не совпадает с вашим текущим email';
+            } else {
+                emailInput.classList.remove('error-field');
+                emailInput.title = '';
+            }
+        }
+
+        // Валидация при вводе
+        emailInput.addEventListener('input', validateForm);
+        confirmCheckbox.addEventListener('change', validateForm);
+
+        // Изначальная валидация
+        validateForm();
+
+        // Подтверждение при отправке
+        deleteForm.addEventListener('submit', function(e) {
+            if (!confirmCheckbox.checked || emailInput.value.trim() !== userEmail) {
+                e.preventDefault();
+                alert('Пожалуйста, правильно заполните все поля подтверждения.');
+                return;
+            }
+
+            const finalConfirmation = confirm(
+                    'ВНИМАНИЕ! Это последнее подтверждение.\n\n' +
+                    'Вы уверены, что хотите навсегда удалить свой аккаунт?\n' +
+                    'Это действие НЕЛЬЗЯ отменить.\n\n' +
+                    'Нажмите OK для подтверждения удаления.'
+            );
+
+            if (!finalConfirmation) {
+                e.preventDefault();
+            }
+        });
+    });
+</script>

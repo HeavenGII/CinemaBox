@@ -7,7 +7,6 @@ const crypto = require('crypto');
 const {sendPasswordResetEmail} = require('../services/sendEmail');
 const keys = require('../keys');
 
-// Middleware для гостей
 const isGuest = (req, res, next) => {
     if (req.session.isAuthenticated) {
         return res.redirect('/');
@@ -24,7 +23,6 @@ router.get('/login', isGuest, (req, res) => {
         title: 'Авторизация',
         isLogin: true,
         error: error.length ? error[0] : null,
-        // csrfToken: req.csrfToken()
     });
 });
 
@@ -39,7 +37,6 @@ router.get('/register', isGuest, (req, res) => {
         isRegister: true,
         error: error.length ? error[0] : null,
         registerData: registerData.length ? registerData[0] : {},
-        // csrfToken: req.csrfToken()
     });
 });
 
@@ -166,34 +163,24 @@ router.post('/forgot-password', async (req, res) => {
     const userResult = await pool.query('SELECT userid, email FROM users WHERE email = $1', [email]);
     const user = userResult.rows[0];
 
-    // Анти-перечисление: всегда сообщаем об успехе, чтобы не давать информацию о наличии email
     if (!user) {
         req.flash('success', 'Если ваш адрес электронной почты есть в нашей базе, вы получите письмо со ссылкой для сброса пароля.');
         return res.redirect('/auth/forgot-password');
     }
 
     try {
-        // 1. Генерация токена (безопасная 32-байтовая строка)
         const token = crypto.randomBytes(32).toString('hex');
-
-        // 2. Время истечения токена: текущее время + 1 час
         const expires = new Date(Date.now() + 3600000);
-
-        // 3. Сохранить токен и время истечения в БД
         await pool.query(
             'UPDATE users SET resetpasswordtoken = $1, resetpasswordexpires = $2 WHERE userid = $3',
             [token, expires, user.userid]
         );
-
-        // 4. Отправить письмо
-        await sendPasswordResetEmail(user.email, token); // Передаем email и ТОКЕН
+        await sendPasswordResetEmail(user.email, token);
 
         req.flash('success', 'Письмо со ссылкой для сброса пароля отправлено на вашу почту.');
 
     } catch (e) {
         console.error('Password reset POST error:', e);
-
-        // Проверяем, является ли ошибка ошибкой email
         if (e.code === 'EENVELOPE' || e.code === 'ECONNECTION') {
             req.flash('error', 'Не удалось отправить письмо. Проверьте настройки почтового сервера.');
         } else {
@@ -214,7 +201,6 @@ router.get('/reset-password', async (req, res) => {
     }
 
     try {
-        // 1. Проверить токен и его срок действия (resetpasswordexpires > NOW())
         const userResult = await pool.query(
             'SELECT userid FROM users WHERE resetpasswordtoken = $1 AND resetpasswordexpires > NOW()',
             [token]
@@ -225,7 +211,6 @@ router.get('/reset-password', async (req, res) => {
             return res.redirect('/auth/forgot-password');
         }
 
-        // 2. Показать форму сброса пароля, передав токен обратно
         res.render('auth/reset-password', {
             title: 'Сброс пароля',
             token: token,
@@ -243,7 +228,6 @@ router.get('/reset-password', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
     const { token, newPassword, confirmPassword } = req.body;
 
-    // 1. Проверка совпадения паролей и минимальной длины
     if (newPassword !== confirmPassword) {
         req.flash('error', 'Пароли не совпадают.');
         return res.redirect(`/auth/reset-password?token=${token}`);
@@ -254,7 +238,6 @@ router.post('/reset-password', async (req, res) => {
     }
 
     try {
-        // 2. Повторно проверить токен
         const userResult = await pool.query(
             'SELECT userid FROM users WHERE resetpasswordtoken = $1 AND resetpasswordexpires > NOW()',
             [token]
@@ -267,10 +250,8 @@ router.post('/reset-password', async (req, res) => {
 
         const userId = userResult.rows[0].userid;
 
-        // 3. Хэшировать новый пароль
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        // 4. Обновить пароль и обнулить токен
         await pool.query(
             'UPDATE users SET password = $1, resetpasswordtoken = NULL, resetpasswordexpires = NULL WHERE userid = $2',
             [hashedPassword, userId]

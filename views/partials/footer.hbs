@@ -1,4 +1,5 @@
 <script src="/app.js"></script>
+<script src="/theme-switcher.js" defer></script>
 <footer class="footer">
     <div class="footer-content">
         <!-- Секция 1: О компании -->
@@ -34,3 +35,19 @@
 
     <p class="copyright">&copy; 2025 CinemaВох. Все права защищены.</p>
 </footer>
+<style>
+    .footer-links p,
+    .footer-links a,
+    .social-icons a,
+    .copyright {
+        color: #f0f0f0 !important;
+    }
+
+    /* Убираем переопределение в светлой теме */
+    .light-theme .footer-links p,
+    .light-theme .footer-links a,
+    .light-theme .social-icons a,
+    .light-theme .copyright {
+        color: #f0f0f0 !important;
+    }
+</style>

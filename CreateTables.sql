@@ -134,8 +134,8 @@ CREATE TABLE shorts (
 -- Таблица для хранения метаданных платежей ЮKassa
 CREATE TABLE payment_metadata (
     id SERIAL PRIMARY KEY,
-    payment_id VARCHAR(100) UNIQUE NOT NULL,
-    yookassa_payment_id VARCHAR(100) UNIQUE NOT NULL,
+    payment_id VARCHAR(100) NOT NULL,
+    yookassa_payment_id VARCHAR(100) NOT NULL,
     order_id VARCHAR(100) NOT NULL,
     user_id INTEGER REFERENCES users(userid),
     amount DECIMAL(10, 2) NOT NULL,

@@ -40,13 +40,13 @@
                 <div>
                     <h3 class="info-title">Кассы и Кинотеатр</h3>
                     <p class="info-text">Ежедневно: 09:00 – 00:00</p>
-                    <p class="info-small text-text-muted mt-2">
+                    <p class="info-small mt-2">
                         * Начало последнего сеанса — не позднее 21:00.
                     </p>
                 </div>
             </div>
 
-            <a href="mailto:support@cinemavox.by" class="btn-primary mt-6">Написать нам</a>
+            <a href="mailto:support@cinemavox.by" class="btn btn-primary mt-6">Написать нам</a>
         </section>
 
         <section class="map-card">
@@ -54,14 +54,14 @@
 
             <div class="map-container">
                 <iframe
-                        src="https://maps.google.com/maps?q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA%2C%20%D1%83%D0%BB.%20%D0%A1%D0%B2%D0%B5%D1%80%D0%B4%D0%BB%D0%BE%D0%B2%D0%B0%2C%2013%D0%90&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                        src="https://maps.google.com/maps?q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA%2C%20%D1%83%D0%BB.%20%D0%9A%D0%B8%D0%BD%D0%BE%D1%88%D0%BD%D0%B0%D1%8F%2C%2010&t=&z=16&ie=UTF8&iwloc=&output=embed"
                         width="100%"
                         height="350"
                         style="border:0;"
                         allowfullscreen=""
                         loading="lazy"
                         referrerpolicy="no-referrer-when-downgrade"
-                        title="Карта по адресу ул. Свердлова, 13А"
+                        title="Карта по адресу ул. Киношная, 10"
                 ></iframe>
             </div>
         </section>
@@ -70,96 +70,221 @@
 
 <style>
     .page-container {
-        max-width: 1100px;
+        max-width: 1200px;
         margin: 0 auto;
         padding: 40px 20px;
-        color: #F0F0F0; /* text-light */
+        color: var(--text-primary);
+        transition: background-color 0.3s ease, color 0.3s ease;
+        min-height: calc(100vh - 200px);
     }
+
     .page-title {
         text-align: center;
         margin-bottom: 40px;
-        color: #D12229; /* primary-red */
-        font-size: 2.5rem;
-        font-weight: 700;
+        color: var(--accent-primary);
+        font-size: 36px;
+        font-weight: bold;
     }
+
     .content-wrapper {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 40px;
     }
-    .contact-info-card, .map-card {
-        background-color: #252525; /* dark-card */
+
+    /* Карточка с контактной информацией */
+    .contact-info-card {
+        background-color: var(--bg-card);
         padding: 30px;
         border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 20px var(--shadow-color);
+        transition: all 0.3s ease;
     }
+
+    /* Карточка с картой */
+    .map-card {
+        background-color: var(--bg-card);
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px var(--shadow-color);
+        transition: all 0.3s ease;
+    }
+
     .section-title {
-        font-size: 1.5rem;
+        font-size: 24px;
         font-weight: 600;
-        margin-bottom: 20px;
-        border-bottom: 1px solid #444;
+        margin-bottom: 25px;
+        color: var(--text-primary);
+        border-bottom: 2px solid var(--accent-primary);
         padding-bottom: 10px;
     }
+
+    /* Группы информации */
     .info-group {
         display: flex;
         align-items: flex-start;
-        margin-bottom: 20px;
-    }
-    .info-icon {
-        color: #D12229; /* primary-red */
-        font-size: 28px;
-        margin-right: 15px;
-        margin-top: 2px;
-    }
-    .info-title {
-        font-weight: 600;
-        font-size: 1.1rem;
-        margin-bottom: 2px;
-    }
-    .info-text {
-        color: #F0F0F0;
-        font-size: 1rem;
-    }
-    .info-small {
-        font-size: 0.9rem;
-    }
-    .map-placeholder {
-        height: 350px;
-        background-color: #1E1E1E; /* dark-bg */
-        border: 2px dashed #444;
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        color: #A0A0A0;
-        text-align: center;
-    }
-    .btn-primary {
-        display: inline-block;
-        padding: 10px 20px;
-        background-color: #D12229;
-        color: white;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 600;
-        transition: background-color 0.2s;
-    }
-    .btn-primary:hover {
-        background-color: #ff0000;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--border-color);
     }
 
+    .info-group:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .info-icon {
+        color: var(--accent-primary);
+        font-size: 28px;
+        margin-right: 20px;
+        margin-top: 2px;
+        flex-shrink: 0;
+        width: 28px;
+        text-align: center;
+    }
+
+    .info-title {
+        font-weight: 600;
+        font-size: 18px;
+        margin-bottom: 5px;
+        color: var(--text-primary);
+    }
+
+    .info-text {
+        color: var(--text-secondary);
+        font-size: 16px;
+        line-height: 1.5;
+    }
+
+    .info-small {
+        font-size: 14px;
+        color: var(--text-muted);
+        font-style: italic;
+        line-height: 1.4;
+    }
+
+    /* Карта */
     .map-container {
         height: 350px;
         overflow: hidden;
         border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 10px var(--shadow-color);
+        background-color: var(--bg-primary);
     }
 
     .map-container iframe {
         width: 100%;
         height: 100%;
         display: block;
+        border: none;
+    }
+
+    /* Кнопка */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 25px;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background-color: var(--accent-primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: var(--accent-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }
+
+    /* Утилитарные классы */
+    .mt-2 { margin-top: 8px; }
+    .mt-6 { margin-top: 24px; }
+    .mt-8 { margin-top: 32px; }
+
+    /* Адаптивность */
+    @media (max-width: 1024px) {
+        .content-wrapper {
+            grid-template-columns: 1fr;
+            gap: 30px;
+        }
+
+        .contact-info-card,
+        .map-card {
+            padding: 25px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .page-container {
+            padding: 30px 15px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 22px;
+        }
+
+        .info-icon {
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .info-title {
+            font-size: 16px;
+        }
+
+        .info-text {
+            font-size: 15px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .page-title {
+            font-size: 24px;
+        }
+
+        .section-title {
+            font-size: 20px;
+        }
+
+        .info-group {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .info-icon {
+            margin-bottom: 10px;
+            margin-right: 0;
+        }
+
+        .map-container {
+            height: 300px;
+        }
+
+        .btn {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+        }
     }
 </style>
 

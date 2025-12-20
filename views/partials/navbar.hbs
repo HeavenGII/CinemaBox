@@ -1,6 +1,6 @@
 <header class="header">
-    <a href="/" class="logo">Cinema<span class="box-highlight">Вох</span></a>
 
+    <a href="/" class="logo">Cinema<span class="box-highlight">Вох</span></a>
     <nav class="nav">
         <a href="/" class="{{#if isHome}}active{{/if}}">Афиша</a>
         <a href="/movies?category=soon" class="{{#if isSoon}}active{{/if}}">Скоро</a>
@@ -76,6 +76,11 @@
                 </div>
             </div>
         {{/if}}
+        <div class="theme-switcher">
+            <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
+                <i class="material-icons theme-icon" id="theme-icon">dark_mode</i>
+            </button>
+        </div>
 
         {{#if isAuth}}
             <a href="/profile" class="profile-link">
@@ -102,25 +107,31 @@
     .admin-dropdown-btn {
         display: flex;
         align-items: center;
-        gap: 5px;
-        background: transparent;
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 4px;
+        gap: 6px;
+        background-color: var(--bg-input);
+        color: #f0f0f0;
+        border: 1px solid var(--border-light);
+        border-radius: 6px;
         padding: 8px 12px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 13px;
+        font-weight: 600;
         transition: all 0.3s ease;
     }
 
     .admin-dropdown-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.5);
+        background-color: var(--bg-input-focus);
+        border-color: var(--accent-primary);
+    }
+
+    .admin-dropdown-btn i:first-child {
+        color: var(--accent-primary);
     }
 
     .dropdown-arrow {
-        font-size: 20px;
+        font-size: 18px;
         transition: transform 0.3s ease;
+        color: #f0f0f0;
     }
 
     .admin-dropdown:hover .dropdown-arrow {
@@ -132,28 +143,31 @@
         position: absolute;
         right: 0;
         top: 100%;
-        background: #1a1a1a;
-        min-width: 200px;
-        border-radius: 4px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: var(--bg-card);
+        min-width: 180px;
+        border-radius: 8px;
+        box-shadow: 0 8px 20px var(--shadow-color);
+        border: 1px solid var(--border-color);
         z-index: 1000;
         margin-top: 5px;
         overflow: hidden;
     }
+
 
     .admin-dropdown:hover .admin-dropdown-content {
         display: block;
     }
 
     .admin-dropdown-content .admin-link {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 10px;
         padding: 12px 16px;
-        color: white;
+        color: var(--text-primary);
         text-decoration: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        transition: background 0.2s ease;
-        font-size: 14px;
+        border-bottom: 1px solid var(--border-color);
+        transition: all 0.2s ease;
+        font-size: 13px;
         white-space: nowrap;
     }
 
@@ -162,13 +176,14 @@
     }
 
     .admin-dropdown-content .admin-link:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background-color: var(--bg-input-focus);
+        color: var(--accent-primary);
+        padding-left: 20px;
     }
 
     .filter-dropdown.nav-filter {
         display: inline-block;
         position: relative;
-        margin-left: 25px;
         align-self: center;
     }
 
@@ -177,79 +192,98 @@
         align-items: center;
         gap: 5px;
         background: transparent;
-        color: #f0f0f0;
+        color: var(--text-primary);
         border: none;
-        padding: 0;
+        padding: 8px 0;
         font-size: 16px;
         opacity: 0.7;
-        transition: opacity 0.2s, color 0.2s;
+        transition: all 0.2s ease;
         height: 100%;
         cursor: pointer;
+        font-weight: 500;
     }
 
     .filter-dropdown-btn:hover,
     .filter-dropdown.active .filter-dropdown-btn {
         opacity: 1;
-        color: #e50914;
-        background: none;
+        color: var(--accent-primary);
     }
 
     .filter-dropdown-content {
-        /* Привязываем выпадающее окно к левому краю кнопки, а не к правому */
-        left: 0;
-        right: auto;
-        display: none;
         position: absolute;
+        left: 0;
         top: 100%;
-        background: #1a1a1a;
-        width: 250px;
-        padding: 15px;
-        border-radius: 4px;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background-color: var(--bg-card);
+        width: 280px;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px var(--shadow-color);
+        border: 1px solid var(--border-color);
         z-index: 1001;
-        margin: 0;
+        margin-top: 10px;
+        display: none;
+        animation: fadeIn 0.2s ease;
     }
+
 
     /* Остальные стили для формы внутри фильтра */
     #filter-form label {
         display: block;
-        color: #ccc;
+        color: var(--text-secondary);
         font-size: 13px;
-        margin-top: 10px;
-        margin-bottom: 5px;
+        margin-top: 12px;
+        margin-bottom: 6px;
+        font-weight: 500;
     }
-
 
     #filter-form input[type="number"],
     #filter-form select {
         width: 100%;
-        padding: 8px;
+        padding: 10px 12px;
         margin-bottom: 10px;
-        border: 1px solid #333;
-        background: #222;
-        color: white;
-        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background-color: var(--bg-input);
+        color: var(--text-primary);
+        border-radius: 6px;
         box-sizing: border-box;
+        font-size: 14px;
+        transition: border-color 0.3s ease;
     }
+
     .filter-actions {
         display: flex;
         justify-content: space-between;
-        gap: 10px;
-        margin-top: 15px;
+        gap: 12px;
+        margin-top: 20px;
     }
-    .apply-filter-btn, .clear-filter-btn {
+    .apply-filter-btn,
+    .clear-filter-btn {
         flex-grow: 1;
-        padding: 10px;
+        padding: 10px 15px;
         border: none;
-        border-radius: 4px;
+        border-radius: 6px;
         cursor: pointer;
-        font-weight: bold;
+        font-weight: 600;
         font-size: 14px;
+        transition: all 0.3s ease;
     }
 
     .apply-filter-btn { background: #e50914; color: white; }
     .clear-filter-btn { background: #444; color: white; }
+
+    .light-theme .nav a,
+    .light-theme .auth-btn,
+    .light-theme .profile-link,
+    .light-theme .profile-link i,
+    .light-theme .box-highlight,
+    .light-theme .theme-toggle-btn,
+    .light-theme .admin-dropdown-btn,
+    .light-theme .dropdown-arrow,
+    .light-theme .filter-dropdown-btn,
+    .light-theme .apply-filter-btn,
+    .light-theme .clear-filter-btn {
+        color: #f0f0f0 !important;
+    }
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function() {

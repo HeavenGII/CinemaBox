@@ -98,24 +98,27 @@
         max-width: 600px;
         margin: 0 auto;
         padding: 2rem;
-        background: #252525;
+        background: #ffffff;
         border-radius: 12px;
-        border: 1px solid #333;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
     .warning-text {
-        background: rgba(209, 34, 41, 0.1);
+        background: rgba(209, 34, 41, 0.05);
         border-left: 4px solid #D12229;
         padding: 1rem;
         margin: 1.5rem 0;
         border-radius: 4px;
+        color: #333;
     }
 
     .delete-info {
-        background: #333;
+        background: #f8f9fa;
         padding: 1rem;
         border-radius: 8px;
         margin: 1.5rem 0;
+        border: 1px solid #e0e0e0;
     }
 
     .delete-info .highlight {
@@ -123,31 +126,27 @@
         font-weight: bold;
     }
 
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
         font-weight: 600;
-        color: #f0f0f0;
+        color: #333;
     }
 
     .form-group input[type="email"],
     .form-group input[type="text"] {
         width: 100%;
         padding: 0.75rem;
-        background: #333;
-        border: 1px solid #444;
+        background: #ffffff;
+        border: 1px solid #ced4da;
         border-radius: 6px;
-        color: #f0f0f0;
+        color: #333;
         font-size: 1rem;
     }
 
     .form-group input.error-field {
         border-color: #D12229;
-        background: rgba(209, 34, 41, 0.1);
+        background: rgba(209, 34, 41, 0.05);
     }
 
     .error-message {
@@ -159,7 +158,7 @@
 
     .form-hint {
         font-size: 0.875rem;
-        color: #888;
+        color: #666;
         margin-top: 0.25rem;
         display: block;
     }
@@ -169,9 +168,9 @@
         align-items: flex-start;
         gap: 0.75rem;
         padding: 1rem;
-        background: rgba(209, 34, 41, 0.05);
+        background: #f8f9fa;
         border-radius: 8px;
-        border: 1px solid #444;
+        border: 1px solid #e0e0e0;
     }
 
     .checkbox-group input[type="checkbox"] {
@@ -184,6 +183,7 @@
         margin: 0;
         font-size: 0.95rem;
         line-height: 1.4;
+        color: #333;
     }
 
     .form-actions {
@@ -206,10 +206,12 @@
 
     .delete-confirm-btn:hover {
         background: #ff4d4d;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(209, 34, 41, 0.2);
     }
 
     .cancel-delete-btn {
-        background: #444;
+        background: #6c757d;
         color: white;
         text-decoration: none;
         padding: 0.75rem 2rem;
@@ -220,15 +222,21 @@
     }
 
     .cancel-delete-btn:hover {
-        background: #555;
+        background: #5a6268;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.2);
     }
 
     .final-warning {
-        background: rgba(209, 34, 41, 0.15);
+        background: rgba(209, 34, 41, 0.05);
         border: 1px solid #D12229;
         padding: 1rem;
         border-radius: 8px;
         margin-top: 2rem;
+    }
+
+    .final-warning p {
+        color: #333;
     }
 
     .final-warning ul {
@@ -238,7 +246,7 @@
 
     .final-warning li {
         margin: 0.25rem 0;
-        color: #ccc;
+        color: #666;
     }
 
     .alert-warning {
@@ -249,8 +257,13 @@
         border-radius: 4px;
     }
 
+    .alert-warning p,
+    .alert-warning li {
+        color: #856404;
+    }
+
     .alert-warning strong {
-        color: #ffc107;
+        color: #856404;
     }
 </style>
 

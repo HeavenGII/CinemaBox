@@ -277,3 +277,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Запускаем инициализацию для шортсов
     initializeSlider('shorts-slider');
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Проверяем, если мы на странице с билетами
+    if (window.location.pathname.includes('/profile/tickets')) {
+        // Проверяем статусы каждые 10 секунд (если есть билеты в статусе "Забронирован")
+        setInterval(function() {
+            const hasBookedTickets = document.querySelectorAll('.ticket-status-Забронирован').length > 0;
+            if (hasBookedTickets) {
+                fetch('/payment/check-tickets')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.fixedCount > 0) {
+                            console.log(`Автоматически исправлено ${data.fixedCount} билетов`);
+                            location.reload(); // Перезагружаем страницу
+                        }
+                    })
+                    .catch(error => console.error('Ошибка проверки статусов:', error));
+            }
+        }, 10000); // Каждые 10 секунд
+    }
+});

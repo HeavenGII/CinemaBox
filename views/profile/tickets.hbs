@@ -82,3 +82,107 @@
         {{/if}}
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Проверяем, вернулись ли мы с оплаты
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('payment_id');
+        const checkPayment = urlParams.get('check_payment');
+
+        if (paymentId && checkPayment) {
+            console.log('Проверяем статус платежа после оплаты:', paymentId);
+
+            // Создаем простое уведомление
+            const checkDiv = document.createElement('div');
+            checkDiv.className = 'alert alert-info mb-3';
+            checkDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                <span>Проверяем статус оплаты...</span>
+            </div>
+        `;
+
+            // Вставляем в начало страницы
+            const container = document.querySelector('.container') || document.querySelector('main');
+            if (container) {
+                container.insertBefore(checkDiv, container.firstChild);
+            }
+
+            // Делаем запрос на проверку
+            fetch(`/payment/quick-check/${paymentId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Результат проверки:', data);
+
+                        if (data.success && data.updated > 0) {
+                            // Обновили билеты - показываем успех и перезагружаем
+                            checkDiv.className = 'alert alert-success mb-3';
+                            checkDiv.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span>Оплата подтверждена! Обновляем страницу...</span>
+                        </div>
+                    `;
+
+                            setTimeout(() => {
+                                // Убираем параметры из URL
+                                const newUrl = window.location.pathname;
+                                window.history.replaceState({}, document.title, newUrl);
+                                location.reload();
+                            }, 2000);
+                        } else if (data.success) {
+                            // Билеты уже в правильном статусе
+                            checkDiv.className = 'alert alert-success mb-3';
+                            checkDiv.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span>Оплата успешно завершена!</span>
+                        </div>
+                    `;
+
+                            setTimeout(() => {
+                                checkDiv.remove();
+                                // Убираем параметры из URL
+                                const newUrl = window.location.pathname;
+                                window.history.replaceState({}, document.title, newUrl);
+                            }, 3000);
+                        } else {
+                            // Ошибка
+                            checkDiv.className = 'alert alert-warning mb-3';
+                            checkDiv.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span>Не удалось проверить статус оплаты. Пожалуйста, обновите страницу.</span>
+                        </div>
+                    `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка проверки:', error);
+                        checkDiv.className = 'alert alert-danger mb-3';
+                        checkDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <span>Ошибка сети при проверке оплаты</span>
+                    </div>
+                `;
+                    });
+        }
+
+        // Также проверяем каждые 10 секунд, если есть забронированные билеты
+        function checkForBookedTickets() {
+            const bookedElements = document.querySelectorAll('[data-ticket-status="Забронирован"]');
+            if (bookedElements.length > 0) {
+                console.log('Найдены забронированные билеты, проверяем статус...');
+
+                // Просто обновляем страницу через 10 секунд, если есть забронированные
+                setTimeout(() => {
+                    location.reload();
+                }, 10000);
+            }
+        }
+
+        // Запускаем проверку через 5 секунд
+        setTimeout(checkForBookedTickets, 5000);
+    });
+</script>

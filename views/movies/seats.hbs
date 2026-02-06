@@ -798,6 +798,28 @@
         background-color: #d1fae5;
         border-color: #a7f3d0;
     }
+
+    .reservation-timer {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .light-theme .reservation-timer {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+    }
+
+    .reservation-timer .text-yellow-600 {
+        color: #856404;
+    }
+
+    .reservation-timer .text-red-600 {
+        color: #721c24;
+    }
 </style>
 
 
@@ -877,32 +899,19 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', initApp);
-
-    // =========================================================
-    // 1. КОНСТАНТЫ и ИНИЦИАЛИЗАЦИЯ ДАННЫХ
-    // =========================================================
     const API_BASE = '/movies/api';
-
-    // *** КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: БЕЗОПАСНОЕ ПАРСИРОВАНИЕ ДАННЫХ ***
     let initialDataJson;
     let movieId;
 
     try {
 
         initialDataJson = JSON.parse(`{{{initialData}}}`);
-        // movieId берется из контекста роута
         movieId = `{{{movieId}}}`;
     } catch (e) {
         console.error("КРИТИЧЕСКАЯ ОШИБКА ПАРСИНГА initialData. Вероятно, сервер не передал валидный JSON:", e);
-        // Fallback: пустые объекты, чтобы избежать ошибок null/undefined далее
         initialDataJson = { screenings: [], initialSeatData: null };
         movieId = '';
     }
-
-    // =========================================================
-    // 2. СТАТУС ПРИЛОЖЕНИЯ
-    // =========================================================
-    // allScreenings теперь массив групп
     let allScreenings = initialDataJson.screenings || [];
     // currentScreeningDetails содержит данные текущего активного сеанса (обновляется при AJAX)
     let currentScreeningDetails = initialDataJson.initialSeatData || null;
@@ -912,10 +921,6 @@
     console.log("Статус загрузки сеансов:", allScreenings.length > 0 ? "Сеансы загружены." : "Сеансы НЕ загружены (allScreenings пуст).");
     console.log("Данные сеансов (allScreenings):", allScreenings);
 
-
-    // =========================================================
-    // 3. ДОСТУП К ЭЛЕМЕНТАМ DOM
-    // =========================================================
     const titleElement = document.getElementById('movie-title');
     const timeButtonsContainer = document.getElementById('time-selection-buttons');
     const timeLoadingOverlay = document.getElementById('time-loading-overlay'); // <-- ДОБАВЛЕНО
@@ -978,7 +983,6 @@
     }
 
     function renderSeatingMap() {
-        // !!! КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Проверка DOM элемента (устраняет TypeError)
         if (!seatingMap) {
             console.error('Критическая ошибка: Элемент #seating-map не найден в DOM.');
             return;
@@ -1050,9 +1054,7 @@
 
         updateSummary();
     }
-    // =========================================================
-    // 5. ЛОГИКА ВЫБОРА ВРЕМЕНИ СЕАНСА (AJAX)
-    // =========================================================
+
 
     async function loadScreening(screeningId) {
         if (!screeningId) return;
@@ -1181,7 +1183,6 @@
     // =========================================================
 
     async function handleBooking() {
-        // Используем динамические данные текущего сеанса
         if (!currentScreeningDetails || selectedSeats.length === 0 || bookButton.disabled) return;
 
         const totalAmount = (selectedSeats.length * currentScreeningDetails.basePrice);
@@ -1193,56 +1194,88 @@
         }
 
         bookButton.disabled = true;
-        bookButton.textContent = 'Перенаправление на оплату...';
-        bookingMessageDiv.textContent = 'Подготовка платежной сессии ЮKassa...';
+        bookButton.textContent = 'Бронирование...';
+        bookingMessageDiv.textContent = 'Резервирование мест...';
         bookingMessageDiv.className = 'booking-message text-text-muted';
 
-        // Формирование метаданных для ЮKassa
-        const temporaryTicketIds = selectedSeats.map(key => ({
-            // Используем ID текущего активного сеанса
-            screeningId: currentScreeningDetails.id,
-            seatKey: key, // "ряд-место"
-            price: currentScreeningDetails.basePrice,
-        }));
-
-
-        const orderDescription = `Билеты на фильм "${currentScreeningDetails.movieTitle}" (${selectedSeats.length} шт.)`;
-
         try {
-            // 1. Вызываем роут создания платежа ЮKassa
-            const response = await fetch('/payment/place-order', {
+            // 1. Сначала резервируем места на 10 минут
+            const reserveResponse = await fetch('/movies/api/reserve-seats', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    totalAmount: totalAmount.toFixed(2), // ЮKassa требует формат строки с 2 знаками
-                    orderDescription: orderDescription,
-                    ticketIds: temporaryTicketIds,
+                    screeningId: currentScreeningDetails.id,
+                    seatKeys: selectedSeats
                 }),
             });
 
-            const result = await response.json();
+            if (!reserveResponse.ok) {
+                const errorData = await reserveResponse.json();
 
-            if (response.ok) {
-                const redirectUrl = result.url;
+                if (reserveResponse.status === 409) {
+                    // Места уже заняты - обновляем схему
+                    await loadScreening(currentScreeningDetails.id);
+                    bookingMessageDiv.textContent = 'Некоторые места уже заняты. Пожалуйста, выберите другие места.';
+                    bookingMessageDiv.classList.add('text-red-500');
+                    bookButton.disabled = false;
+                    bookButton.textContent = 'Оплатить';
+                    return;
+                }
 
-                bookingMessageDiv.textContent = 'Перенаправление на страницу оплаты ЮKassa...';
+                throw new Error(errorData.error || 'Ошибка бронирования');
+            }
+
+            const reserveResult = await reserveResponse.json();
+
+            // 2. После успешного бронирования создаем платеж
+            bookingMessageDiv.textContent = 'Создание платежа...';
+
+            const temporaryTicketIds = selectedSeats.map(key => ({
+                screeningId: currentScreeningDetails.id,
+                seatKey: key,
+                price: currentScreeningDetails.basePrice,
+            }));
+
+            const orderDescription = `Билеты на фильм "${currentScreeningDetails.movieTitle}" (${selectedSeats.length} шт.)`;
+
+            const paymentResponse = await fetch('/payment/place-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    totalAmount: totalAmount.toFixed(2),
+                    orderDescription: orderDescription,
+                    ticketIds: temporaryTicketIds,
+                    reservationId: reserveResult.reservationId
+                }),
+            });
+
+            const paymentResult = await paymentResponse.json();
+
+            if (paymentResponse.ok) {
+                const redirectUrl = paymentResult.url;
+
+                bookingMessageDiv.textContent = 'Перенаправление на страницу оплаты...';
                 bookingMessageDiv.classList.remove('text-text-muted', 'text-red-500');
                 bookingMessageDiv.classList.add('text-green-500');
 
-                // 2. Перенаправляем пользователя на ЮKassa
                 setTimeout(() => {
                     window.location.href = redirectUrl;
                 }, 500);
 
             } else {
-                // Обработка 401 (Не авторизован)
-                if (response.status === 401) {
-                    const redirectUrl = result.redirect || '/auth/login';
-                    const errorMessage = result.error || 'Необходимо войти в систему для оформления заказа.';
+                // В случае ошибки оплаты, нужно освободить забронированные места
+                if (reserveResult.reservationId) {
+                    // Можно добавить endpoint для отмены бронирования
+                    // await fetch(`/movies/api/cancel-reservation/${reserveResult.reservationId}`, { method: 'DELETE' });
+                }
 
-                    bookingMessageDiv.textContent = errorMessage;
+                if (paymentResponse.status === 401) {
+                    const redirectUrl = paymentResult.redirect || '/auth/login';
+                    bookingMessageDiv.textContent = paymentResult.error || 'Необходимо войти в систему.';
                     bookingMessageDiv.classList.add('text-red-500');
                     bookButton.textContent = 'Авторизация...';
 
@@ -1252,22 +1285,42 @@
                     return;
                 }
 
-                // Общая ошибка
-                bookingMessageDiv.textContent = result.error || 'Ошибка при создании платежа. Попробуйте еще раз.';
+                bookingMessageDiv.textContent = paymentResult.error || 'Ошибка при создании платежа.';
                 bookingMessageDiv.classList.add('text-red-500');
-                bookingMessageDiv.classList.remove('text-text-muted', 'text-green-500');
                 bookButton.disabled = false;
                 bookButton.textContent = 'Оплатить';
             }
 
         } catch (error) {
-            console.error('Payment creation failed (Network/Critical Error):', error);
-            bookingMessageDiv.textContent = 'Критическая ошибка сети. Проверьте соединение.';
+            console.error('Ошибка при бронировании/оплате:', error);
+            bookingMessageDiv.textContent = 'Ошибка сети. Пожалуйста, попробуйте еще раз.';
             bookingMessageDiv.classList.add('text-red-500');
-            bookingMessageDiv.classList.remove('text-text-muted', 'text-green-500');
             bookButton.disabled = false;
             bookButton.textContent = 'Оплатить';
         }
+    }
+
+    function startReservationTimer(minutes) {
+        let timeLeft = minutes * 60;
+        const timerElement = document.createElement('div');
+        timerElement.id = 'reservation-timer';
+        timerElement.className = 'reservation-timer';
+        document.querySelector('.booking-summary-panel').appendChild(timerElement);
+
+        const timer = setInterval(() => {
+            timeLeft--;
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            timerElement.textContent = `Осталось времени: ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                timerElement.textContent = 'Время бронирования истекло';
+                timerElement.classList.add('expired');
+                // Можно автоматически обновить схему мест
+                setTimeout(() => loadScreening(currentScreeningDetails.id), 2000);
+            }
+        }, 1000);
     }
 
     bookButton.addEventListener('click', handleBooking);

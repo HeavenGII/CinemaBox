@@ -68,7 +68,7 @@ async function sendPhotoWithQrCode(chatId, ticket, caption) {
 }
 
 async function sendMessage(chatId, message) {
-    const bot = getBot(); // <-- Получаем экземпляр бота
+    const bot = getBot();
 
     if (!bot) {
         console.error('[Telegram Service] Бот не инициализирован');

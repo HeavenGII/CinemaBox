@@ -4,7 +4,6 @@ const pool = require('../db');
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8369747071:AAFDEOe_Veoqw4LeFyeIZqHPO3xFtVqLA44';
 let bot; // <-- Глобальная переменная бота
 
-// Функция для создания сообщения об отмене сеанса
 function createScreeningCancellationMessage(screening, refundAmount, movieTitle, hallName, startTime) {
     const formattedTime = new Date(startTime).toLocaleTimeString('ru-RU', {
         hour: '2-digit',

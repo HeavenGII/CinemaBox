@@ -456,7 +456,12 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
         const bookedSeatsQuery = `
             SELECT rownum, seatnum
             FROM tickets
-            WHERE screeningid = $1 AND (status = 'Оплачен' OR status = 'Бронь');
+            WHERE screeningid = $1 
+            AND (
+                status = 'Оплачен' 
+                OR status = 'Бронь'
+                OR (status = 'Забронирован' AND reservationexpiresat > NOW())
+            );
         `;
         const { rows: bookedSeats } = await pool.query(bookedSeatsQuery, [initialScreeningId]);
         const bookedSeatKeys = bookedSeats.map(seat => `${seat.rownum}-${seat.seatnum}`);
@@ -494,7 +499,7 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
             seatsPerRow: firstScreening.seatsperrow,
             basePrice: parseFloat(firstScreening.baseprice),
             bookedSeatKeys: bookedSeatKeys,
-            startTime: formatDate(firstScreening.starttime.toISOString(), 'DD.MM. HH:mm'),
+            startTime: formatDate(firstScreening.starttime.toISOString(), 'DD.MM.YYYY HH:mm'),
         };
 
 
@@ -543,7 +548,12 @@ router.get('/api/seats/:sessionId', async (req, res) => {
         const bookedSeatsQuery = `
             SELECT rownum, seatnum
             FROM tickets
-            WHERE screeningid = $1 AND (status = 'Оплачен' OR status = 'Бронь');
+            WHERE screeningid = $1 
+            AND (
+                status = 'Оплачен' 
+                OR status = 'Бронь'
+                OR (status = 'Забронирован' AND reservationexpiresat > NOW())
+            );
         `;
         const { rows: bookedSeats } = await pool.query(bookedSeatsQuery, [sessionId]);
         const bookedSeatKeys = bookedSeats.map(seat => `${seat.rownum}-${seat.seatnum}`);
@@ -558,7 +568,7 @@ router.get('/api/seats/:sessionId', async (req, res) => {
             bookedSeatKeys: bookedSeatKeys,
 
             // Передаем полную дату для сводки, как и в initialSeatData
-            startTime: formatDate(screening.starttime.toISOString(), 'DD.MM. HH:mm'),
+            startTime: formatDate(screening.starttime.toISOString(), 'DD.MM.YYYY HH:mm'),
         };
 
         res.json(responseData);
@@ -566,6 +576,85 @@ router.get('/api/seats/:sessionId', async (req, res) => {
     } catch (e) {
         console.error(`Ошибка при загрузке схемы для сеанса ID ${sessionId}:`, e);
         res.status(500).json({ error: 'Ошибка сервера при загрузке схемы мест.' });
+    }
+});
+
+router.post('/api/reserve-seats', authMiddleware, async (req, res) => {
+    const { screeningId, seatKeys } = req.body;
+    const userId = req.session.user.userId;
+
+    if (!screeningId || !seatKeys || !Array.isArray(seatKeys) || seatKeys.length === 0) {
+        return res.status(400).json({ error: 'Неверные данные для бронирования' });
+    }
+
+    try {
+        await pool.query('BEGIN');
+
+        // 1. Проверяем, не заняты ли места
+        const seatCheckPromises = seatKeys.map(seatKey => {
+            const [row, seat] = seatKey.split('-').map(Number);
+
+            return pool.query(`
+                SELECT 1 FROM tickets 
+                WHERE screeningid = $1 
+                AND rownum = $2 
+                AND seatnum = $3 
+                AND (
+                    status = 'Оплачен' 
+                    OR status = 'Бронь'
+                    OR (status = 'Забронирован' AND reservationexpiresat > NOW())
+                )
+            `, [screeningId, row, seat]);
+        });
+
+        const seatChecks = await Promise.all(seatCheckPromises);
+
+        // Проверяем, есть ли уже занятые места
+        const alreadyBooked = seatChecks.some(result => result.rows.length > 0);
+
+        if (alreadyBooked) {
+            await pool.query('ROLLBACK');
+            return res.status(409).json({
+                error: 'Некоторые места уже забронированы или оплачены'
+            });
+        }
+
+        // 2. Создаем временные бронирования
+        const reservationExpires = new Date(Date.now() + 10 * 60 * 1000); // +10 минут
+
+        for (const seatKey of seatKeys) {
+            const [row, seat] = seatKey.split('-').map(Number);
+            const qrToken = crypto.randomBytes(16).toString('hex');
+
+            await pool.query(`
+                INSERT INTO tickets (
+                    userid, screeningid, rownum, seatnum, 
+                    status, totalprice, qrtoken, reservationexpiresat
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `, [
+                userId,
+                screeningId,
+                row,
+                seat,
+                'Забронирован',
+                0, // Цена будет обновлена после оплаты
+                qrToken,
+                reservationExpires
+            ]);
+        }
+
+        await pool.query('COMMIT');
+
+        res.json({
+            success: true,
+            message: `Места забронированы на 10 минут`,
+            reservationId: crypto.randomBytes(8).toString('hex')
+        });
+
+    } catch (error) {
+        await pool.query('ROLLBACK');
+        console.error('Ошибка при бронировании мест:', error);
+        res.status(500).json({ error: 'Ошибка сервера при бронировании' });
     }
 });
 

@@ -400,6 +400,7 @@ router.get('/tickets', authMiddleware, async (req, res) => {
     const now = new Date();
 
     try {
+
         const query = `
             SELECT
                 t.ticketid,
@@ -671,15 +672,12 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
 
             console.log('✅ Ticket status updated to "Возвращен"');
 
-            // 2. ЗАПРЕЩЕННЫЙ ВЫЗОВ API УДАЛЕН. Вместо этого сохраняем запись о возврате в базу.
-            // Генерируем реалистичный ID возврата для симуляции
             const simulatedRefundId = `rf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const amountInRub = parseFloat(ticketInfo.amount);
 
             console.log('🔄 Creating refund record in database (simulated):', simulatedRefundId);
             console.log('💰 Refund amount (RUB):', amountInRub);
 
-            // Сохраняем информацию о "возврате" в таблицу refunds
             const refundQuery = `
                 INSERT INTO refunds (
                     ticket_id,
@@ -710,7 +708,6 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
 
             await client.query('COMMIT');
 
-            // Реалистичное сообщение для пользователя, как будто возврат через API прошел
             req.flash('success',
                 `Билет №${ticketId} успешно отменен. ` +
                 `Возврат средств в размере ${ticketInfo.totalprice} BYN инициирован. ` +

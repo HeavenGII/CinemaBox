@@ -115,5 +115,10 @@ module.exports = {
     // Хелпер AND (логическое И)
     and: function(v1, v2) {
         return v1 && v2;
+    },
+
+    includes: function(array, value) {
+        if (!array) return false;
+        return array.includes(value);
     }
 };

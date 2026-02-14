@@ -91,6 +91,51 @@
                 </div>
             </div>
 
+            <div class="form-row">
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="onlineEnabled" name="onlineEnabled" {{#if movieData.onlineenabled}}checked{{/if}}>
+                    <label for="onlineEnabled">Доступен для онлайн-просмотра</label>
+                </div>
+            </div>
+
+            <div id="onlineUrlSection" class="form-row" {{#unless movieData.onlineenabled}}style="display: none;"{{/unless}}>
+                <div class="form-group">
+                    <label for="onlineUrl">Ссылка на фильм в облачном хранилище</label>
+                    <input type="url" id="onlineUrl" name="onlineUrl"
+                           value="{{movieData.onlineurl}}"
+                           placeholder="https://storage.yandexcloud.net/bucket/filename.mp4">
+                    <small class="form-text">
+                        {{#if movieData.onlineurl}}
+                            <a href="{{movieData.onlineurl}}" target="_blank" class="current-link">
+                                <i class="fas fa-external-link-alt"></i> Текущий файл
+                            </a>
+                        {{/if}}
+                    </small>
+                </div>
+            </div>
+
+            <!-- ДОБАВЛЕННЫЙ БЛОК: Доступные качества видео -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Доступные качества видео:</label>
+                    <div class="qualities-checkbox-group">
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="1080p" {{#if (includes movieData.qualities "1080p")}}checked{{/if}}> 1080p
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="720p" {{#if (includes movieData.qualities "720p")}}checked{{/if}}> 720p
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="480p" {{#if (includes movieData.qualities "480p")}}checked{{/if}}> 480p
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="360p" {{#if (includes movieData.qualities "360p")}}checked{{/if}}> 360p
+                        </label>
+                    </div>
+                    <small class="form-text">Выберите качества, доступные для этого фильма</small>
+                </div>
+            </div>
+
             <div class="form-group description-full-width">
                 <label for="description">Описание / Сюжет</label>
                 <textarea id="description" name="description" rows="5" required>{{movieData.description}}</textarea>

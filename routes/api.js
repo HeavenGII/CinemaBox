@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const router = Router();
+const pool = require('../db');
 
 const {
     extractMovieTitle,
@@ -65,6 +66,47 @@ router.post('/ratings', async (req, res) => {
             text: fallbackText,
             error: error.message
         });
+    }
+});
+
+router.get('/movie/:id/qualities', async (req, res) => {
+    const movieId = req.params.id;
+
+    try {
+        const result = await pool.query(
+            'SELECT onlineurl, qualities FROM movies WHERE movieid = $1',
+            [movieId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Movie not found' });
+        }
+
+        const movie = result.rows[0];
+
+        // Если onlineurl не заканчивается на /, добавляем
+        let baseUrl = movie.onlineurl;
+        if (baseUrl && !baseUrl.endsWith('/')) {
+            baseUrl = baseUrl + '/';
+        }
+
+        // Убираем / в конце если это папка с ID
+        if (baseUrl && baseUrl.match(/\/\d+\/$/)) {
+            baseUrl = baseUrl.slice(0, -1);
+        }
+
+        // Получаем качества из БД или используем значения по умолчанию
+        const qualities = movie.qualities || ['1080p', '720p', '480p', '360p'];
+
+        res.json({
+            baseUrl: baseUrl,
+            qualities: qualities,
+            movieId: movieId
+        });
+
+    } catch (error) {
+        console.error('Error fetching qualities:', error);
+        res.status(500).json({ error: 'Server error' });
     }
 });
 

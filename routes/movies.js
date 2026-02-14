@@ -98,6 +98,7 @@ router.get('/', async (req, res) => {
 // GET /movies/:id - Страница с деталями фильма
 router.get('/:id', async (req, res) => {
     const movieId = req.params.id;
+    const view = req.query.view;
 
     if (!movieId) {
         return res.status(404).render('404', { title: 'Фильм не найден' });
@@ -108,7 +109,8 @@ router.get('/:id', async (req, res) => {
             SELECT
                 m.movieid, m.title, m.description, m.durationmin, m.genre,
                 m.posterurl, m.trailerurl, m.releaseyear, m.ratingavg, m.price,
-                m.isactive, m.agerestriction,  -- ← ДОБАВЛЕНО!
+                m.isactive, m.agerestriction,
+                m.onlineurl, m.onlineenabled,  -- ← ДОБАВЬТЕ ЭТИ ПОЛЯ!
                 d.name AS directorname, d.directorid
             FROM movies m
             JOIN directors d ON m.directorid = d.directorid
@@ -188,6 +190,7 @@ router.get('/:id', async (req, res) => {
                 ...movie,
                 trailerId: trailerId
             },
+            watchOnline: view === 'movie',
             movieShorts: movieShorts,
             firstUpcomingScreening: firstUpcomingScreening,
             allUpcomingScreenings: allUpcomingScreenings,

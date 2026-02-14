@@ -438,7 +438,8 @@ router.post('/add', adminMiddleware,
 
         let {
             title, originaltitle, description, durationmin, genre, trailerUrl,
-            releaseYear, directorName, price, isActive, agerestriction
+            releaseYear, directorName, price, isActive, agerestriction,
+            onlineEnabled, onlineUrl, qualities
         } = req.body;
 
         if (genre) {
@@ -501,13 +502,16 @@ router.post('/add', adminMiddleware,
 
             const insertQuery = `
                 INSERT INTO movies (title, originaltitle, description, durationmin,
-                    genre, posterurl, trailerurl, releaseyear, directorid, price, agerestriction)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING movieid;
+                    genre, posterurl, trailerurl, releaseyear, directorid, price, 
+                    agerestriction, onlineurl, onlineenabled, qualities)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING movieid;
             `;
 
             await client.query(insertQuery, [
-                title, originaltitle, description, durationmin, genre, finalPosterUrl, trailerUrl,
-                releaseYear, directorId, price, agerestriction
+                title, originaltitle, description, durationmin, genre, finalPosterUrl,
+                trailerUrl, releaseYear, directorId, price, agerestriction,
+                onlineUrl || null, onlineEnabled === 'on',
+                qualities || ['1080p', '720p', '480p', '360p']
             ]);
 
             await client.query('COMMIT');
@@ -635,7 +639,8 @@ router.post('/movies/:movieid/edit', adminMiddleware,
 
         const {
             title, originaltitle, description, durationmin, genre,
-            trailerUrl, releaseYear, directorName, price, isActive, agerestriction
+            trailerUrl, releaseYear, directorName, price, isActive, agerestriction,
+            onlineEnabled, onlineUrl, qualities
         } = req.body;
 
         let newPosterUrl = null;
@@ -716,16 +721,20 @@ router.post('/movies/:movieid/edit', adminMiddleware,
 
             const updateQuery = `
                 UPDATE movies 
-                SET title = $1, originaltitle = $2, description = $3, durationmin = $4, genre = $5, 
-                    posterurl = COALESCE($6, posterurl), trailerurl = $7, releaseyear = $8, 
-                    directorid = $9, isactive = $10, price = $11, agerestriction = $12
-                WHERE movieid = $13
+                SET title = $1, originaltitle = $2, description = $3, durationmin = $4, 
+                    genre = $5, posterurl = COALESCE($6, posterurl), trailerurl = $7, 
+                    releaseyear = $8, directorid = $9, isactive = $10, price = $11, 
+                    agerestriction = $12, onlineurl = $13, onlineenabled = $14, qualities = $15
+                WHERE movieid = $16
                 RETURNING title;
             `;
 
             await client.query(updateQuery, [
-                title, originaltitle, description, durationmin, genre, newPosterUrl, trailerUrl,
-                releaseYear, directorId, isActive === 'on', price, agerestriction, movieId
+                title, originaltitle, description, durationmin, genre, newPosterUrl,
+                trailerUrl, releaseYear, directorId, isActive === 'on', price,
+                agerestriction, onlineUrl || null, onlineEnabled === 'on',
+                qualities || ['1080p', '720p', '480p', '360p'],
+                movieId
             ]);
 
             if (newPosterUrl && oldPosterPath) {

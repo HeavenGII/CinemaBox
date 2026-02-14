@@ -78,6 +78,44 @@
                     <label for="trailerUrl">Ссылка на Трейлер</label>
                     <input type="url" id="trailerUrl" name="trailerUrl" value="{{movieData.trailerUrl}}">
                 </div>
+
+            </div>
+            <div class="form-row">
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="onlineEnabled" name="onlineEnabled" {{#if movieData.online_enabled}}checked{{/if}}>
+                    <label for="onlineEnabled">Доступен для онлайн-просмотра</label>
+                </div>
+            </div>
+
+            <div id="onlineUrlSection" class="form-row" style="display: none;">
+                <div class="form-group">
+                    <label for="onlineUrl">Ссылка на фильм в облачном хранилище</label>
+                    <input type="url" id="onlineUrl" name="onlineUrl"
+                           value="{{movieData.onlineUrl}}"
+                           placeholder="https://storage.yandexcloud.net/bucket/filename.mp4">
+                    <small class="form-text">Загрузите фильм в Яндекс.Облако и вставьте прямую ссылку</small>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Доступные качества видео:</label>
+                    <div class="qualities-checkbox-group">
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="1080p" checked> 1080p
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="720p" checked> 720p
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="480p" checked> 480p
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="qualities" value="360p" checked> 360p
+                        </label>
+                    </div>
+                    <small class="form-text">Выберите качества, доступные для этого фильма</small>
+                </div>
             </div>
 
             <div class="form-group description-full-width">

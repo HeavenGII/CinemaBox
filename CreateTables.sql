@@ -49,7 +49,10 @@ CREATE TABLE movies (
     ratingavg       DECIMAL(3, 1) DEFAULT 0.0,
     isactive        BOOLEAN       NOT NULL DEFAULT TRUE,
     price           DECIMAL(5, 2),
-    agerestriction INT NOT NULL DEFAULT 0
+    agerestriction  INT           NOT NULL DEFAULT 0,
+    onlineurl      VARCHAR(512),
+    onlineenabled  BOOLEAN       DEFAULT FALSE,
+    qualities TEXT[] DEFAULT ARRAY['1080p', '720p', '480p', '360p']
 );
 
 -- 5. Таблица залов

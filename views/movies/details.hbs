@@ -60,26 +60,124 @@
         </div>
     </div>
 
-        <div class="movie-description-block">
-            <h2>О фильме</h2>
-            <p>{{movie.description}}</p>
-        </div>
+    <div class="movie-description-block">
+        <h2>О фильме</h2>
+        <p>{{movie.description}}</p>
+    </div>
 
-        {{#if movie.trailerId}}
-            <div class="movie-trailer-block">
-                <h2>Официальный трейлер</h2>
-                <div class="trailer-iframe-container">
-                    <iframe
-                            width="100%"
-                            height="100%"
-                            src="https://www.youtube.com/embed/{{movie.trailerId}}"
-                            frameborder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowfullscreen>
-                    </iframe>
-                </div>
+    {{#if movie.trailerId}}
+        <div class="movie-video-block">
+            <div class="video-switch-tabs">
+                {{#if movie.onlineenabled}}
+                    <button class="video-tab-btn {{#unless watchOnline}}active{{/unless}}" data-type="trailer">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Трейлер</span>
+                    </button>
+                    <button class="video-tab-btn {{#if watchOnline}}active{{/if}}" data-type="movie">
+                        <i class="fas fa-film"></i>
+                        <span>Весь фильм</span>
+                    </button>
+                {{else}}
+                    <div class="video-tab-btn active" style="cursor: default;">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Трейлер</span>
+                    </div>
+                {{/if}}
             </div>
-        {{/if}}
+
+            <div class="video-container">
+                <div id="trailerVideo" class="video-content {{#unless watchOnline}}active{{/unless}}">
+                    <div class="video-wrapper">
+                        <div class="trailer-iframe-container">
+                            <iframe
+                                    width="100%"
+                                    height="100%"
+                                    src="https://www.youtube.com/embed/{{movie.trailerId}}"
+                                    frameborder="0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowfullscreen>
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Фильм онлайн (только если доступен) -->
+                {{#if movie.onlineenabled}}
+                    <div id="movieVideo" class="video-content {{#if watchOnline}}active{{/if}}">
+                        <div class="video-wrapper">
+                            <video
+                                    id="onlineMoviePlayer"
+                                    controlsList="nodownload"
+                                    poster="{{movie.posterurl}}"
+                                    class="movie-video-player"
+                                    preload="metadata"
+                                    data-movie-id="{{movie.movieid}}"
+                                    data-base-url="{{movie.onlineurl}}"
+                            >
+                                <source src="{{movie.onlineurl}}/master.m3u8" type="application/x-mpegURL">
+                                Ваш браузер не поддерживает видео тег.
+                            </video>
+
+                            <!-- Кастомные контролы поверх видео -->
+                            <div class="custom-video-controls">
+                                <button class="control-btn play-pause-btn" title="Воспроизвести/Пауза">
+                                    <i class="fas fa-play"></i>
+                                </button>
+
+                                <input type="range" class="progress-bar" min="0" max="100" value="0" step="0.1">
+
+                                <div class="time-display">
+                                    <span class="current-time">0:00</span> /
+                                    <span class="total-time">0:00</span>
+                                </div>
+
+                                <div class="volume-container">
+                                    <button class="control-btn volume-btn" title="Звук">
+                                        <i class="fas fa-volume-up"></i>
+                                    </button>
+                                    <input type="range" class="volume-slider" min="0" max="1" step="0.1" value="1">
+                                </div>
+
+                                <div class="quality-selector">
+                                    <button class="control-btn quality-btn" title="Качество видео">
+                                        <i class="fas fa-hd"></i>
+                                        <span class="current-quality">Auto</span>
+                                    </button>
+                                    <div class="quality-menu">
+                                        <div class="quality-option" data-quality="auto">Авто</div>
+                                        <div class="quality-option" data-quality="1080p">1080p</div>
+                                        <div class="quality-option" data-quality="720p">720p</div>
+                                        <div class="quality-option" data-quality="480p">480p</div>
+                                        <div class="quality-option" data-quality="360p">360p</div>
+                                    </div>
+                                </div>
+
+                                <button class="control-btn fullscreen-btn" title="Полный экран">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="video-info">
+                            <div class="info-badge">
+                                <i class="fas fa-clock"></i>
+                                <span>{{formatDuration movie.durationmin}}</span>
+                            </div>
+                            <div class="info-badge quality-info">
+                                <i class="fas fa-hd"></i>
+                                <span class="current-quality-info">Авто</span>
+                            </div>
+                            {{#if movie.agerestriction}}
+                                <div class="info-badge age-badge age-{{movie.agerestriction}}">
+                                    <span>{{movie.agerestriction}}+</span>
+                                </div>
+                            {{/if}}
+                        </div>
+                    </div>
+                {{/if}}
+            </div>
+        </div>
+    {{/if}}
 
     {{#if movieShorts.length}}
         <div class="movie-shorts-block">
@@ -93,10 +191,10 @@
                     {{#each movieShorts}}
                         <div class="short-card">
                             <a href="/shorts?movieid={{../movie.movieid}}#{{this.shortid}}" title="{{this.title}}">
-                                <div class="short-placeholder-video">
-                                    <i class="material-icons">play_circle_filled</i>
-                                </div>
-                                <span class="short-duration">{{this.durationsec}} секунд</span>
+                            <div class="short-placeholder-video">
+                                <i class="material-icons">play_circle_filled</i>
+                            </div>
+                            <span class="short-duration">{{this.durationsec}} секунд</span>
                             </a>
                             <div class="card-info">
                                 <h3>{{this.title}}</h3>
@@ -112,102 +210,102 @@
         </div>
     {{/if}}
 
-        <!-- НОВЫЙ БЛОК ОТЗЫВОВ -->
-        <div class="reviews-section" id="reviews-section">
-            <h2>Отзывы зрителей</h2>
-            {{#if movie.isactive}}
-                {{#if error}}
-                    <div class="alert alert-error">{{error}}</div>
-                {{/if}}
-                {{#if success}}
-                    <div class="alert alert-success">{{success}}</div>
-                {{/if}}
+    <!-- НОВЫЙ БЛОК ОТЗЫВОВ -->
+    <div class="reviews-section" id="reviews-section">
+        <h2>Отзывы зрителей</h2>
+        {{#if movie.isactive}}
+            {{#if error}}
+                <div class="alert alert-error">{{error}}</div>
+            {{/if}}
+            {{#if success}}
+                <div class="alert alert-success">{{success}}</div>
+            {{/if}}
 
-                {{#if isAuthenticated}}
-                    <div class="review-form-container">
-                        {{#if currentUserReview}}
+            {{#if isAuthenticated}}
+                <div class="review-form-container">
+                    {{#if currentUserReview}}
+                        <h3>Ваш отзыв (Редактирование)</h3>
+                        <form action="/movies/{{movie.movieid}}/review" method="POST" id="edit-review-form">
+                            <div class="form-group rating-group">
+                                <label>Ваша оценка:</label>
+                                <div class="star-rating-area">
+                                    <input type="radio" id="star5-edit" name="rating" value="5" {{#ifeq currentUserReview.rating 5}}checked{{/ifeq}} required>
+                                    <label for="star5-edit" title="5 Звезд"></label>
+                                    <input type="radio" id="star4-edit" name="rating" value="4" {{#ifeq currentUserReview.rating 4}}checked{{/ifeq}}>
+                                    <label for="star4-edit" title="4 Звезды"></label>
+                                    <input type="radio" id="star3-edit" name="rating" value="3" {{#ifeq currentUserReview.rating 3}}checked{{/ifeq}}>
+                                    <label for="star3-edit" title="3 Звезды"></label>
+                                    <input type="radio" id="star2-edit" name="rating" value="2" {{#ifeq currentUserReview.rating 2}}checked{{/ifeq}}>
+                                    <label for="star2-edit" title="2 Звезды"></label>
+                                    <input type="radio" id="star1-edit" name="rating" value="1" {{#ifeq currentUserReview.rating 1}}checked{{/ifeq}}>
+                                    <label for="star1-edit" title="1 Звезда"></label>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="reviewText-edit">Текст отзыва (до 500 символов):</label>
+                                <textarea name="reviewText" id="reviewText-edit" rows="6" maxlength="500">{{currentUserReview.reviewtext}}</textarea>
+                            </div>
+
                             <h3>Ваш отзыв (Редактирование)</h3>
-                            <form action="/movies/{{movie.movieid}}/review" method="POST" id="edit-review-form">
-                                <div class="form-group rating-group">
-                                    <label>Ваша оценка:</label>
-                                    <div class="star-rating-area">
-                                        <input type="radio" id="star5-edit" name="rating" value="5" {{#ifeq currentUserReview.rating 5}}checked{{/ifeq}} required>
-                                        <label for="star5-edit" title="5 Звезд"></label>
-                                        <input type="radio" id="star4-edit" name="rating" value="4" {{#ifeq currentUserReview.rating 4}}checked{{/ifeq}}>
-                                        <label for="star4-edit" title="4 Звезды"></label>
-                                        <input type="radio" id="star3-edit" name="rating" value="3" {{#ifeq currentUserReview.rating 3}}checked{{/ifeq}}>
-                                        <label for="star3-edit" title="3 Звезды"></label>
-                                        <input type="radio" id="star2-edit" name="rating" value="2" {{#ifeq currentUserReview.rating 2}}checked{{/ifeq}}>
-                                        <label for="star2-edit" title="2 Звезды"></label>
-                                        <input type="radio" id="star1-edit" name="rating" value="1" {{#ifeq currentUserReview.rating 1}}checked{{/ifeq}}>
-                                        <label for="star1-edit" title="1 Звезда"></label>
-                                    </div>
+                            <div class="review-edit-actions">
+                                <form action="/movies/{{movie.movieid}}/review" method="POST" id="edit-review-form">
+
+                                    <button type="submit" class="btn btn-primary btn-sm">Обновить отзыв</button>
+                                </form>
+
+                                <form action="/movies/{{movie.movieid}}/review/delete" method="POST"
+                                      onsubmit="return confirm('Вы уверены, что хотите удалить свой отзыв и оценку? Это действие необратимо.');"
+                                      class="delete-user-review-form">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash-alt"></i> Удалить отзыв
+                                    </button>
+                                </form>
+                            </div>
+                        </form>
+
+                    {{else}}
+                        <h3>Оставить свой отзыв</h3>
+                        <form action="/movies/{{movie.movieid}}/review" method="POST">
+                            <div class="form-group rating-group">
+                                <label>Ваша оценка:</label>
+                                <div class="star-rating-area">
+                                    <input type="radio" id="star5-new" name="rating" value="5" required>
+                                    <label for="star5-new" title="5 Звезд"></label>
+                                    <input type="radio" id="star4-new" name="rating" value="4">
+                                    <label for="star4-new" title="4 Звезды"></label>
+                                    <input type="radio" id="star3-new" name="rating" value="3">
+                                    <label for="star3-new" title="3 Звезды"></label>
+                                    <input type="radio" id="star2-new" name="rating" value="2">
+                                    <label for="star2-new" title="2 Звезды"></label>
+                                    <input type="radio" id="star1-new" name="rating" value="1">
+                                    <label for="star1-new" title="1 Звезда"></label>
                                 </div>
+                            </div>
 
-                                <div class="form-group">
-                                    <label for="reviewText-edit">Текст отзыва (до 500 символов):</label>
-                                    <textarea name="reviewText" id="reviewText-edit" rows="6" maxlength="500">{{currentUserReview.reviewtext}}</textarea>
-                                </div>
+                            <div class="form-group">
+                                <label for="reviewText-new">Текст отзыва (до 500 символов):</label>
+                                <textarea name="reviewText" id="reviewText-new" rows="6" maxlength="500"></textarea>
+                            </div>
 
-                                    <h3>Ваш отзыв (Редактирование)</h3>
-                                    <div class="review-edit-actions">
-                                        <form action="/movies/{{movie.movieid}}/review" method="POST" id="edit-review-form">
-
-                                                <button type="submit" class="btn btn-primary btn-sm">Обновить отзыв</button>
-                                        </form>
-
-                                        <form action="/movies/{{movie.movieid}}/review/delete" method="POST"
-                                              onsubmit="return confirm('Вы уверены, что хотите удалить свой отзыв и оценку? Это действие необратимо.');"
-                                              class="delete-user-review-form">
-                                            <button type="submit" class="btn btn-danger btn-sm">
-                                                <i class="fas fa-trash-alt"></i> Удалить отзыв
-                                            </button>
-                                        </form>
-                                    </div>
-                            </form>
-
-                        {{else}}
-                            <h3>Оставить свой отзыв</h3>
-                            <form action="/movies/{{movie.movieid}}/review" method="POST">
-                                <div class="form-group rating-group">
-                                    <label>Ваша оценка:</label>
-                                    <div class="star-rating-area">
-                                        <input type="radio" id="star5-new" name="rating" value="5" required>
-                                        <label for="star5-new" title="5 Звезд"></label>
-                                        <input type="radio" id="star4-new" name="rating" value="4">
-                                        <label for="star4-new" title="4 Звезды"></label>
-                                        <input type="radio" id="star3-new" name="rating" value="3">
-                                        <label for="star3-new" title="3 Звезды"></label>
-                                        <input type="radio" id="star2-new" name="rating" value="2">
-                                        <label for="star2-new" title="2 Звезды"></label>
-                                        <input type="radio" id="star1-new" name="rating" value="1">
-                                        <label for="star1-new" title="1 Звезда"></label>
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="reviewText-new">Текст отзыва (до 500 символов):</label>
-                                    <textarea name="reviewText" id="reviewText-new" rows="6" maxlength="500"></textarea>
-                                </div>
-
-                                <button type="submit" class="btn btn-primary">Опубликовать отзыв</button>
-                            </form>
-                        {{/if}}
-                    </div>
-
-                {{else}}
-                    <div class="alert alert-info review-login-message">
-                        <a href="/auth/login">Войдите</a>, чтобы оставить свой отзыв и оценку.
-                    </div>
-                {{/if}}
+                            <button type="submit" class="btn btn-primary">Опубликовать отзыв</button>
+                        </form>
+                    {{/if}}
+                </div>
 
             {{else}}
                 <div class="alert alert-info review-login-message">
-                    Отзывы можно оставлять только на фильмы, находящиеся в активном прокате.
+                    <a href="/auth/login">Войдите</a>, чтобы оставить свой отзыв и оценку.
                 </div>
             {{/if}}
 
-            <div class="reviews-list">
+        {{else}}
+            <div class="alert alert-info review-login-message">
+                Отзывы можно оставлять только на фильмы, находящиеся в активном прокате.
+            </div>
+        {{/if}}
+
+        <div class="reviews-list">
             <!-- 1. ОТЗЫВ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (если есть) - выводится первым -->
             {{#if currentUserReview}}
                 <div class="review-item user-review-highlight">
@@ -247,7 +345,7 @@
             {{else}}
                 {{#unless currentUserReview}}
                     {{#if movie.isactive}}
-                    <p>Будьте первым, кто оставит отзыв на этот фильм!</p>
+                        <p>Будьте первым, кто оставит отзыв на этот фильм!</p>
                     {{/if}}
                 {{/unless}}
             {{/each}}
@@ -256,6 +354,10 @@
 </div>
 
 <style>
+    :root {
+        /* ... другие переменные ... */
+        --progress: 0%;
+    }
     /* Контейнер */
     .movie-details-container {
         max-width: 1200px;
@@ -1137,4 +1239,1277 @@
             margin-top: 10px;
         }
     }
+    /* Переключатель вкладок над видео */
+    .video-switch-tabs {
+        display: flex;
+        background: var(--bg-card);
+        border-radius: 12px 12px 0 0;
+        overflow: hidden;
+        border-bottom: 2px solid var(--border-color);
+        justify-content: flex-start; /* Выравниваем по левому краю */
+        padding: 0 20px; /* Добавляем отступы по бокам */
+    }
+
+    .video-tab-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 24px; /* Уменьшили вертикальные отступы */
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 3px solid transparent;
+        white-space: nowrap; /* Чтобы текст не переносился */
+        min-width: 120px; /* Минимальная ширина кнопок */
+    }
+
+    .video-tab-btn:hover {
+        background: rgba(229, 9, 20, 0.05);
+        color: var(--text-primary);
+    }
+
+    .video-tab-btn.active {
+        color: var(--accent-primary);
+        border-bottom-color: var(--accent-primary);
+        background: rgba(229, 9, 20, 0.1);
+    }
+
+    .video-tab-btn i {
+        font-size: 16px; /* Немного уменьшили иконки */
+    }
+
+    .video-container {
+        position: relative;
+        background: var(--bg-card);
+        border-radius: 0 0 12px 12px;
+        overflow: hidden;
+    }
+
+    .video-content {
+        display: none;
+        width: 100%;
+    }
+
+    .video-content.active {
+        display: block;
+    }
+
+    /* Плеер для онлайн-фильма */
+    .video-wrapper {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%; /* Соотношение 16:9 по умолчанию */
+        background: #000;
+    }
+
+    /* Плеер для онлайн-фильма */
+    .movie-video-player {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ключевое свойство - заполняет весь контейнер */
+        display: block;
+    }
+
+    /* Для полноэкранного режима */
+    .video-wrapper:fullscreen .movie-video-player {
+        object-fit: contain; /* В полноэкранном режиме показываем полностью */
+    }
+
+    #trailerVideo .video-wrapper {
+        padding-top: 0;
+    }
+
+    #trailerVideo .trailer-iframe-container {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%;
+        background: var(--bg-primary);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 6px 25px var(--shadow-color);
+    }
+
+    #trailerVideo .trailer-iframe-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    #movieVideo .video-wrapper {
+        position: relative;
+        padding-top: 56.25%;
+        background: #000;
+    }
+
+    #movieVideo .movie-video-player {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Полноэкранный режим для онлайн-фильма */
+    #movieVideo .video-wrapper:fullscreen {
+        padding-top: 0;
+    }
+
+    #movieVideo .video-wrapper:fullscreen .movie-video-player {
+        width: 100vw;
+        height: 100vh;
+        object-fit: contain;
+    }
+
+    /* Полноэкранный режим для трейлера */
+    #trailerVideo .video-wrapper:fullscreen {
+        padding-top: 0;
+    }
+
+    #trailerVideo .video-wrapper:fullscreen .trailer-iframe-container {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    #trailerVideo .video-wrapper:fullscreen .trailer-iframe-container iframe {
+        width: 100vw;
+        height: 100vh;
+    }
+
+
+    /* Кастомные контролы для видео */
+    .custom-video-controls {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.7), transparent);
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        z-index: 100;
+    }
+    .video-wrapper.video-paused .custom-video-controls {
+        opacity: 1;
+        visibility: visible;
+    }
+    :fullscreen .custom-video-controls,
+    :-webkit-full-screen .custom-video-controls,
+    :-moz-full-screen .custom-video-controls {
+        background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.8));
+        padding-bottom: 30px;
+    }
+
+    .movie-video-player:hover + .custom-video-controls,
+    .custom-video-controls:hover {
+        opacity: 1;
+    }
+
+    .control-btn {
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #333;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .control-btn:hover {
+        background: white;
+        transform: scale(1.1);
+    }
+
+    .progress-bar {
+        flex: 1;
+        height: 4px;
+        -webkit-appearance: none;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+    }
+
+    .progress-bar::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        cursor: pointer;
+    }
+
+    .progress-bar::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        cursor: pointer;
+        border: none;
+    }
+
+    .time-display {
+        color: white;
+        font-family: monospace;
+        font-size: 13px;
+        min-width: 90px;
+    }
+
+    .volume-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .volume-slider {
+        width: 60px;
+        height: 4px;
+        -webkit-appearance: none;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        outline: none;
+        opacity: 0;
+        transition: opacity 0.3s ease, width 0.3s ease;
+    }
+
+    .volume-container:hover .volume-slider {
+        opacity: 1;
+        width: 80px;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: white;
+        cursor: pointer;
+    }
+
+    .volume-slider::-moz-range-thumb {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: white;
+        cursor: pointer;
+        border: none;
+    }
+
+    .video-info {
+        display: flex;
+        gap: 10px;
+        padding: 15px 20px;
+        background: var(--bg-card);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .info-badge {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 10px;
+        background: var(--bg-primary);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+
+    .info-badge i {
+        color: var(--accent-primary);
+    }
+
+    .age-badge {
+        color: white !important;
+        font-weight: bold;
+    }
+
+    .age-0 { background: #4CAF50; }
+    .age-6 { background: #2196F3; }
+    .age-12 { background: #FF9800; }
+    .age-16 { background: #F44336; }
+    .age-18 { background: #000; }
+
+    /* Трейлер */
+    .trailer-iframe-container {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%; /* 16:9 */
+        background: var(--bg-primary);
+    }
+
+    .trailer-iframe-container iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+
+    /* Кнопки действий фильма - обновляем стили */
+    .movie-actions {
+        display: flex;
+        gap: 20px;
+        margin-top: 30px;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary, .btn-success {
+        flex: 1;
+        min-width: 200px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 16px 30px;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: var(--accent-primary);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(229, 9, 20, 0.3);
+    }
+
+    .btn-success {
+        background: var(--success-color);
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #218838;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        .video-switch-tabs {
+            flex-direction: column;
+        }
+
+        .video-tab-btn {
+            padding: 15px;
+            justify-content: flex-start;
+            padding-left: 25px;
+            border-bottom: 1px solid var(--border-color);
+            border-right: none;
+        }
+
+        .video-tab-btn.active {
+            border-bottom: 3px solid var(--accent-primary);
+            border-right: none;
+        }
+
+        .custom-video-controls {
+            flex-wrap: wrap;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .progress-bar {
+            order: 1;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .time-display {
+            order: 2;
+            text-align: center;
+            min-width: auto;
+            flex: 1;
+        }
+
+        .btn-primary, .btn-success {
+            min-width: 100%;
+        }
+
+        .movie-actions {
+            flex-direction: column;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .video-tab-btn {
+            font-size: 14px;
+            padding: 12px 20px;
+        }
+
+        .video-tab-btn i {
+            font-size: 16px;
+        }
+
+        .control-btn {
+            width: 32px;
+            height: 32px;
+            font-size: 12px;
+        }
+
+        .volume-slider {
+            width: 40px;
+        }
+
+        .volume-container:hover .volume-slider {
+            width: 50px;
+        }
+    }
+
+    /* Прогресс-бар для видео */
+    .progress-bar {
+        flex: 1;
+        height: 6px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: linear-gradient(to right,
+        var(--accent-primary) 0%,
+        var(--accent-primary) var(--progress, 0%),
+        rgba(255, 255, 255, 0.2) var(--progress, 0%),
+        rgba(255, 255, 255, 0.2) 100%
+        );
+        border-radius: 3px;
+        outline: none;
+        cursor: pointer;
+        position: relative;
+    }
+
+    /* Ползунок */
+    .progress-bar::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    .progress-bar::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--accent-primary);
+        cursor: pointer;
+        border: 2px solid white;
+        box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    }
+
+    .quality-selector {
+        position: relative;
+        margin-left: 8px;
+    }
+
+    .quality-btn {
+        background: transparent !important; /* Полностью прозрачный фон */
+        border: none;
+        color: white;
+        font-size: 15px;
+        font-weight: 500;
+        padding: 4px 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        min-width: auto;
+        height: 32px;
+        letter-spacing: 0.3px;
+        box-shadow: none !important;
+    }
+
+    .quality-btn:hover {
+        transform: scale(1.05);
+    }
+
+    .quality-btn i {
+        font-size: 16px;
+        color: var(--accent-primary);
+        margin-right: 2px;
+    }
+
+    .quality-btn .current-quality {
+        font-weight: 600;
+        background: transparent !important;
+        padding: 2px 4px;
+        border-radius: 3px;
+        color: white;
+        transition: all 0.2s ease;
+        font-size: 15px;
+    }
+
+    .quality-btn:hover .current-quality {
+        transform: scale(1.1);
+        color: var(--accent-primary);
+    }
+
+    .quality-menu {
+        position: absolute;
+        bottom: 40px;
+        right: 0;
+        background: rgba(20, 20, 20, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 8px;
+        padding: 6px 0;
+        min-width: 110px;
+        display: none;
+        z-index: 1000;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .quality-menu.show {
+        display: block;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .quality-option {
+        padding: 8px 16px;
+        color: rgba(255, 255, 255, 0.9);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 13px;
+        text-align: left;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .quality-option:hover {
+        background: rgba(229, 9, 20, 0.3);
+        color: white;
+        padding-left: 20px;
+    }
+
+    .quality-option.selected {
+        color: white;
+        background: rgba(229, 9, 20, 0.2);
+        font-weight: 500;
+    }
+
+    .quality-option.selected::after {
+        content: '✓';
+        margin-left: 10px;
+        color: var(--accent-primary);
+        font-weight: bold;
+    }
+
+    .quality-option[data-quality="auto"] {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 4px;
+        padding-bottom: 10px;
+    }
+
+    .quality-info {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .quality-info i {
+        color: var(--accent-primary);
+    }
+
+    .current-quality-info {
+        font-weight: bold;
+        color: var(--accent-primary);
+    }
+
+    /* Индикатор буферизации */
+    .hls-buffering {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: var(--accent-primary);
+        animation: spin 1s ease-in-out infinite;
+        display: none;
+        z-index: 10;
+    }
+
+    .hls-buffering.show {
+        display: block;
+    }
+
+    @keyframes spin {
+        to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
 </style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Переключение между трейлером и фильмом
+        const tabBtns = document.querySelectorAll('.video-tab-btn[data-type]');
+        const videoContents = document.querySelectorAll('.video-content');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const type = this.dataset.type;
+                tabBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                videoContents.forEach(content => content.classList.remove('active'));
+                document.getElementById(`${type}Video`).classList.add('active');
+
+                if (type === 'trailer' && onlinePlayer) {
+                    onlinePlayer.pause();
+                }
+                if (type === 'movie' && onlinePlayer) {
+                    onlinePlayer.play().catch(e => console.log('Автовоспроизведение заблокировано'));
+                }
+                updateUrlParams(type);
+            });
+        });
+
+        // Управление онлайн-видео
+        const onlinePlayer = document.getElementById('onlineMoviePlayer');
+
+        if (onlinePlayer) {
+            const videoWrapper = onlinePlayer.parentElement;
+            const customControls = document.querySelector('.custom-video-controls');
+            const playPauseBtn = document.querySelector('.play-pause-btn');
+            const progressBar = document.querySelector('.progress-bar');
+            const currentTimeEl = document.querySelector('.current-time');
+            const totalTimeEl = document.querySelector('.total-time');
+            const volumeBtn = document.querySelector('.volume-btn');
+            const volumeSlider = document.querySelector('.volume-slider');
+            const fullscreenBtn = document.querySelector('.fullscreen-btn');
+
+            // Элементы для качества
+            const qualityBtn = document.querySelector('.quality-btn');
+            const qualityMenu = document.querySelector('.quality-menu');
+            const qualityOptions = document.querySelectorAll('.quality-option');
+            const currentQualitySpan = document.querySelector('.current-quality');
+            const currentQualityInfo = document.querySelector('.current-quality-info');
+
+            // HLS переменные
+            let hls = null;
+            let currentQuality = 'auto';
+            let availableQualities = [];
+            let bufferingIndicator = null;
+            let controlsTimeout;
+            let progressUpdateInterval;
+
+            // Создаем индикатор буферизации
+            bufferingIndicator = document.createElement('div');
+            bufferingIndicator.className = 'hls-buffering';
+            videoWrapper.appendChild(bufferingIndicator);
+
+            // Функции управления контролами
+            function showControls() {
+                if (customControls) {
+                    customControls.style.opacity = '1';
+                    customControls.style.visibility = 'visible';
+                }
+                clearTimeout(controlsTimeout);
+                if (!onlinePlayer.paused) {
+                    controlsTimeout = setTimeout(() => {
+                        if (customControls && !customControls.matches(':hover')) {
+                            customControls.style.opacity = '0';
+                            customControls.style.visibility = 'hidden';
+                        }
+                    }, 3000);
+                }
+            }
+
+            function hideControls() {
+                if (customControls && !customControls.matches(':hover') && !onlinePlayer.paused) {
+                    customControls.style.opacity = '0';
+                    customControls.style.visibility = 'hidden';
+                }
+            }
+
+            // Форматирование времени
+            function formatTime(seconds) {
+                if (isNaN(seconds) || seconds < 0) return '0:00';
+
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+
+                if (hrs > 0) {
+                    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                } else {
+                    return `${mins}:${secs.toString().padStart(2, '0')}`;
+                }
+            }
+
+            // Обновление прогресса
+            function updateProgress() {
+                if (!onlinePlayer || !onlinePlayer.duration) return;
+                const currentTime = onlinePlayer.currentTime;
+                const duration = onlinePlayer.duration;
+                const percent = (currentTime / duration) * 100;
+
+                if (progressBar) {
+                    progressBar.value = percent;
+                    progressBar.style.setProperty('--progress', percent + '%');
+                }
+                if (currentTimeEl) {
+                    currentTimeEl.textContent = formatTime(currentTime);
+                }
+            }
+
+            function updateTime() {
+                if (totalTimeEl && onlinePlayer.duration) {
+                    totalTimeEl.textContent = formatTime(onlinePlayer.duration);
+                }
+            }
+
+            function updateQualityInfo(qualityName) {
+                let displayName = 'Auto';
+
+                console.log('updateQualityInfo called with:', qualityName);
+
+                // Игнорируем qualityName = 0 (это временный сброс)
+                if (qualityName === 0 || qualityName === '0') {
+                    console.log('Ignoring quality 0, keeping last displayed:', lastDisplayedQuality);
+                    return; // Не обновляем отображение для временного качества
+                }
+
+                if (!qualityName) {
+                    displayName = 'Auto';
+                }
+                else if (!isNaN(qualityName) && qualityName !== 'Auto' && qualityName !== 'auto') {
+                    displayName = qualityName + 'p';
+                }
+                else if (typeof qualityName === 'string' && qualityName.includes('p')) {
+                    displayName = qualityName;
+                }
+                else if (qualityName === 'Auto' || qualityName === 'auto') {
+                    displayName = 'Auto';
+                }
+                else if (qualityName) {
+                    displayName = qualityName.toString();
+                }
+
+                console.log('Setting display name to:', displayName);
+
+                // Сохраняем последнее отображаемое качество
+                lastDisplayedQuality = displayName;
+
+                if (currentQualitySpan) {
+                    currentQualitySpan.textContent = displayName;
+                }
+                if (currentQualityInfo) {
+                    currentQualityInfo.textContent = displayName;
+                }
+            }
+
+            // Функция для получения ID фильма
+            function getMovieId() {
+                return onlinePlayer.dataset.movieId;
+            }
+
+            // Функция загрузки качеств с сервера
+            async function fetchQualities() {
+                const movieId = getMovieId();
+                if (!movieId) {
+                    console.log('Movie ID not found, using defaults');
+                    return {
+                        baseUrl: onlinePlayer.dataset.baseUrl,
+                        qualities: ['1080p', '720p', '480p', '360p']
+                    };
+                }
+
+                try {
+                    const response = await fetch(`/api/movie/${movieId}/qualities`);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch qualities');
+                    }
+                    const data = await response.json();
+                    console.log(`Loaded qualities for movie ${movieId}:`, data);
+                    return data;
+                } catch (error) {
+                    console.error('Error fetching qualities:', error);
+                    return {
+                        baseUrl: onlinePlayer.dataset.baseUrl,
+                        qualities: ['1080p', '720p', '480p', '360p']
+                    };
+                }
+            }
+
+            // Обновление меню из списка качеств
+            function updateQualityMenuFromList(qualitiesList) {
+                qualityOptions.forEach(option => {
+                    const quality = option.dataset.quality;
+                    if (quality === 'auto') return;
+
+                    if (qualitiesList.includes(quality)) {
+                        option.style.display = 'flex';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+            }
+
+            // Инициализация HLS
+            async function initHLS(quality = 'auto') {
+                if (hls) {
+                    hls.destroy();
+                }
+
+                const qualityInfo = await fetchQualities();
+                let baseUrl = qualityInfo.baseUrl;
+
+                if (!baseUrl) {
+                    console.error('No base URL for video');
+                    return;
+                }
+
+                // Формируем правильный URL
+                if (!baseUrl.endsWith('/')) {
+                    baseUrl = baseUrl + '/';
+                }
+
+                // Убираем лишний слеш если есть
+                baseUrl = baseUrl.replace(/\/+$/, '');
+
+                let manifestUrl;
+                if (quality === 'auto') {
+                    manifestUrl = baseUrl + '/master.m3u8';
+                } else {
+                    let qualityWithP = quality;
+                    if (!isNaN(quality) && quality !== 'auto') {
+                        qualityWithP = quality + 'p';
+                    }
+
+                    if (!qualityInfo.qualities.includes(qualityWithP)) {
+                        console.log(`Quality ${qualityWithP} not available for movie ${getMovieId()}, using auto`);
+                        manifestUrl = baseUrl + '/master.m3u8';
+                    } else {
+                        manifestUrl = baseUrl + '/' + qualityWithP + '/playlist.m3u8';
+                    }
+                }
+
+                console.log(`Loading HLS for movie ${getMovieId()} from:`, manifestUrl);
+
+                // Обновляем меню
+                updateQualityMenuFromList(qualityInfo.qualities);
+
+                if (Hls.isSupported()) {
+                    hls = new Hls({
+                        maxBufferLength: 30,
+                        maxMaxBufferLength: 600,
+                        enableWorker: true,
+                        lowLatencyMode: false,
+                        backBufferLength: 90,
+                        startLevel: quality === 'auto' ? -1 : -1
+                    });
+
+                    hls.loadSource(manifestUrl);
+                    if (quality !== 'auto') {
+                        // Если качество передано как число, показываем его с 'p'
+                        updateQualityInfo(quality);
+                    }
+                    hls.attachMedia(onlinePlayer);
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+                        console.log('HLS manifest parsed:', data);
+                        availableQualities = data.levels.map(level => ({
+                            height: level.height,
+                            bitrate: level.bitrate,
+                            name: level.height + 'p'
+                        }));
+
+                        // Устанавливаем начальное качество, но не перезаписываем если уже выбрано
+                        if (quality === 'auto' && lastDisplayedQuality === 'Auto') {
+                            updateQualityInfo('Auto');
+                        } else if (quality !== 'auto') {
+                            // Если выбрано конкретное качество, показываем его
+                            updateQualityInfo(quality);
+                        }
+                    });
+
+                    hls.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
+                        if (hls.levels && hls.levels[data.level]) {
+                            const level = hls.levels[data.level];
+                            const qualityName = level.height.toString();
+                            console.log('LEVEL_SWITCHED event, level index:', data.level, 'quality:', qualityName);
+
+                            // Игнорируем только если это явно нежелательное качество
+                            if (qualityName !== '0') {
+                                updateQualityInfo(qualityName);
+                            } else {
+                                console.log('Ignoring quality 0 from level switch');
+                            }
+                        } else {
+                            console.log('LEVEL_SWITCHED event with no level data:', data);
+                        }
+                    });
+
+                    hls.on(Hls.Events.ERROR, function(event, data) {
+                        console.error('HLS Error:', data);
+                        if (data.fatal) {
+                            switch(data.type) {
+                                case Hls.ErrorTypes.NETWORK_ERROR:
+                                    hls.startLoad();
+                                    break;
+                                case Hls.ErrorTypes.MEDIA_ERROR:
+                                    hls.recoverMediaError();
+                                    break;
+                                default:
+                                    initHLS('auto');
+                                    break;
+                            }
+                        }
+                    });
+
+                    hls.on(Hls.Events.BUFFER_STALLED, function() {
+                        bufferingIndicator.classList.add('show');
+                    });
+
+                    hls.on(Hls.Events.BUFFER_APPENDED, function() {
+                        bufferingIndicator.classList.remove('show');
+                    });
+
+                } else if (onlinePlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    onlinePlayer.src = manifestUrl;
+                    availableQualities = qualityInfo.qualities.map(q => ({
+                        height: parseInt(q),
+                        name: q
+                    }));
+                    updateQualityMenuFromList(qualityInfo.qualities);
+                }
+            }
+
+            // Смена качества
+            function switchQuality(quality) {
+                console.log('switchQuality called with:', quality);
+
+                const currentTime = onlinePlayer.currentTime;
+                const wasPlaying = !onlinePlayer.paused;
+
+                // Извлекаем число из строки (убираем 'p' если есть)
+                let qualityValue = quality;
+                if (quality !== 'auto' && quality.endsWith('p')) {
+                    qualityValue = quality.slice(0, -1);
+                }
+
+                console.log('Quality value for HLS:', qualityValue);
+
+                currentQuality = qualityValue;
+
+                qualityOptions.forEach(opt => {
+                    opt.classList.remove('selected');
+                    if (opt.dataset.quality === quality) {
+                        opt.classList.add('selected');
+                    }
+                });
+
+                // Сохраняем выбранное качество для отображения
+                const displayQuality = quality === 'auto' ? 'Auto' : quality;
+                lastDisplayedQuality = displayQuality;
+
+                // Сразу обновляем отображение
+                updateQualityInfo(displayQuality);
+
+                initHLS(qualityValue).then(() => {
+                    const restorePosition = function() {
+                        onlinePlayer.currentTime = currentTime;
+                        if (wasPlaying) {
+                            onlinePlayer.play().catch(e => console.log('Play failed:', e));
+                        }
+                        onlinePlayer.removeEventListener('loadedmetadata', restorePosition);
+                    };
+                    onlinePlayer.addEventListener('loadedmetadata', restorePosition);
+                });
+
+                if (qualityMenu) {
+                    qualityMenu.classList.remove('show');
+                }
+            }
+
+            // Инициализация контролов
+            function initControls() {
+                if (customControls) {
+                    customControls.style.opacity = '0';
+                    customControls.style.visibility = 'hidden';
+                }
+
+                videoWrapper.addEventListener('mousemove', showControls);
+                videoWrapper.addEventListener('mouseenter', showControls);
+
+                videoWrapper.addEventListener('mouseleave', () => {
+                    if (!onlinePlayer.paused) hideControls();
+                });
+
+                onlinePlayer.addEventListener('pause', () => {
+                    showControls();
+                    videoWrapper.classList.add('video-paused');
+                });
+
+                onlinePlayer.addEventListener('play', () => {
+                    videoWrapper.classList.remove('video-paused');
+                    controlsTimeout = setTimeout(hideControls, 3000);
+                });
+
+                onlinePlayer.addEventListener('click', function() {
+                    if (this.paused) {
+                        this.play();
+                    } else {
+                        this.pause();
+                    }
+                    showControls();
+                });
+
+                if (customControls) {
+                    customControls.addEventListener('mouseenter', showControls);
+                    customControls.addEventListener('mouseleave', () => {
+                        if (!onlinePlayer.paused) {
+                            controlsTimeout = setTimeout(hideControls, 1000);
+                        }
+                    });
+                }
+
+                setTimeout(showControls, 500);
+                setTimeout(() => {
+                    if (!onlinePlayer.paused) hideControls();
+                }, 2000);
+            }
+
+            // Обработчики для кнопок качества
+            if (qualityBtn && qualityMenu) {
+                qualityBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    qualityMenu.classList.toggle('show');
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!qualityBtn.contains(e.target) && !qualityMenu.contains(e.target)) {
+                        qualityMenu.classList.remove('show');
+                    }
+                });
+
+                qualityOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        switchQuality(option.dataset.quality);
+                    });
+                });
+            }
+
+            // Инициализация
+            initHLS('auto');
+            setTimeout(() => {
+                if (currentQualitySpan && currentQualitySpan.textContent === 'Auto') {
+                    // Если всё ещё Auto, оставляем
+                } else {
+                    updateQualityInfo('Auto');
+                }
+            }, 1000);
+            initControls();
+
+            // Кнопка play/pause
+            if (playPauseBtn) {
+                playPauseBtn.addEventListener('click', function() {
+                    if (onlinePlayer.paused) {
+                        onlinePlayer.play();
+                        this.innerHTML = '<i class="fas fa-pause"></i>';
+                    } else {
+                        onlinePlayer.pause();
+                        this.innerHTML = '<i class="fas fa-play"></i>';
+                    }
+                });
+
+                onlinePlayer.addEventListener('play', () => {
+                    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                });
+
+                onlinePlayer.addEventListener('pause', () => {
+                    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+                });
+            }
+
+            // Прогресс бар
+            if (progressBar) {
+                progressBar.addEventListener('input', function() {
+                    const time = (this.value / 100) * onlinePlayer.duration;
+                    onlinePlayer.currentTime = time;
+                });
+                progressUpdateInterval = setInterval(updateProgress, 100);
+            }
+
+            // Громкость
+            if (volumeBtn && volumeSlider) {
+                volumeBtn.addEventListener('click', function() {
+                    if (onlinePlayer.volume > 0) {
+                        onlinePlayer.volume = 0;
+                        volumeSlider.value = 0;
+                        this.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                    } else {
+                        onlinePlayer.volume = 1;
+                        volumeSlider.value = 1;
+                        this.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    }
+                });
+
+                volumeSlider.addEventListener('input', function() {
+                    onlinePlayer.volume = this.value;
+                    if (volumeBtn) {
+                        if (this.value == 0) {
+                            volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+                        } else if (this.value < 0.5) {
+                            volumeBtn.innerHTML = '<i class="fas fa-volume-down"></i>';
+                        } else {
+                            volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        }
+                    }
+                });
+            }
+
+            // Полный экран
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', function() {
+                    if (!document.fullscreenElement) {
+                        videoWrapper.requestFullscreen().catch(err => {
+                            console.log('Ошибка полноэкранного режима:', err);
+                        });
+                        this.innerHTML = '<i class="fas fa-compress"></i>';
+                    } else {
+                        document.exitFullscreen();
+                        this.innerHTML = '<i class="fas fa-expand"></i>';
+                    }
+                });
+            }
+
+            // События полноэкранного режима
+            document.addEventListener('fullscreenchange', handleFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+            function handleFullscreenChange() {
+                if (document.fullscreenElement ||
+                        document.webkitFullscreenElement ||
+                        document.mozFullScreenElement ||
+                        document.msFullscreenElement) {
+                    showControls();
+                } else {
+                    if (!onlinePlayer.paused) {
+                        setTimeout(hideControls, 1000);
+                    }
+                }
+            }
+
+            // События видео
+            onlinePlayer.addEventListener('loadedmetadata', () => {
+                updateTime();
+                updateProgress();
+            });
+
+            onlinePlayer.addEventListener('timeupdate', updateProgress);
+
+            onlinePlayer.addEventListener('ended', () => {
+                if (playPauseBtn) {
+                    playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+                }
+                if (progressBar) {
+                    progressBar.value = 0;
+                    progressBar.style.setProperty('--progress', '0%');
+                }
+                showControls();
+            });
+
+            onlinePlayer.addEventListener('waiting', () => {
+                bufferingIndicator.classList.add('show');
+            });
+
+            onlinePlayer.addEventListener('playing', () => {
+                bufferingIndicator.classList.remove('show');
+            });
+
+            onlinePlayer.addEventListener('error', () => {
+                console.error('Video error occurred');
+                bufferingIndicator.classList.remove('show');
+            });
+
+            videoWrapper.addEventListener('touchstart', function() {
+                if (customControls) {
+                    if (customControls.style.opacity === '1') {
+                        hideControls();
+                    } else {
+                        showControls();
+                    }
+                }
+            });
+
+            window.addEventListener('beforeunload', () => {
+                clearInterval(progressUpdateInterval);
+                if (hls) {
+                    hls.destroy();
+                }
+            });
+        }
+
+        function updateUrlParams(viewType) {
+            const url = new URL(window.location);
+            if (viewType === 'movie') {
+                url.searchParams.set('view', 'movie');
+            } else {
+                url.searchParams.delete('view');
+            }
+            window.history.replaceState({}, '', url);
+        }
+
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewType = urlParams.get('view');
+            if (viewType === 'movie') {
+                const movieBtn = document.querySelector('[data-type="movie"]');
+                if (movieBtn) movieBtn.click();
+            }
+        }
+        checkUrlParams();
+    });
+
+    function switchToMovie() {
+        const movieBtn = document.querySelector('[data-type="movie"]');
+        if (movieBtn) {
+            movieBtn.click();
+            document.querySelector('.movie-video-block').scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+    }
+</script>

@@ -1830,6 +1830,25 @@ body {
     text-align: right;
 }
 
+.qualities-checkbox-group {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.checkbox-inline input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
 /* Сеансы */
 .admin-form-block {
     max-width: 600px;

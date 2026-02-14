@@ -81,7 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (item.poster) {
                     const img = document.createElement('img');
-                    img.onerror = function() { this.style.display = 'none'; };
+                    img.onerror = function () {
+                        this.style.display = 'none';
+                    };
                     img.src = item.poster;
                     img.alt = item.title;
                     img.className = 'autocomplete-poster';
@@ -139,8 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const response = await fetch('/api/ratings', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: userQuery })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({query: userQuery})
                 });
 
                 if (!response.ok) {
@@ -278,11 +280,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSlider('shorts-slider');
 });
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Проверяем, если мы на странице с билетами
     if (window.location.pathname.includes('/profile/tickets')) {
         // Проверяем статусы каждые 10 секунд (если есть билеты в статусе "Забронирован")
-        setInterval(function() {
+        setInterval(function () {
             const hasBookedTickets = document.querySelectorAll('.ticket-status-Забронирован').length > 0;
             if (hasBookedTickets) {
                 fetch('/payment/check-tickets')
@@ -298,3 +300,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 10000); // Каждые 10 секунд
     }
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    const onlineCheckbox = document.getElementById('onlineEnabled');
+    const onlineUrlSection = document.getElementById('onlineUrlSection');
+    const onlineUrlInput = document.getElementById('onlineUrl');
+
+    if (onlineCheckbox && onlineUrlSection) {
+        onlineCheckbox.addEventListener('change', function () {
+            if (this.checked) {
+                onlineUrlSection.style.display = 'flex';
+                onlineUrlInput.required = true;
+            } else {
+                onlineUrlSection.style.display = 'none';
+                onlineUrlInput.required = false;
+                onlineUrlInput.value = '';
+            }
+        });
+
+        if (onlineCheckbox.checked) {
+            onlineUrlSection.style.display = 'flex';
+            onlineUrlInput.required = true;
+        }
+    }
+
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            if (onlineCheckbox && onlineCheckbox.checked) {
+                const url = onlineUrlInput.value.trim();
+                if (!url) {
+                    e.preventDefault();
+                    alert('Пожалуйста, введите ссылку на фильм в облачном хранилище');
+                    onlineUrlInput.focus();
+                    return false;
+                }
+
+                try {
+                    new URL(url);
+                } catch (err) {
+                    e.preventDefault();
+                    alert('Пожалуйста, введите корректную URL ссылку');
+                    onlineUrlInput.focus();
+                    return false;
+                }
+            }
+        });
+    }
+});
+

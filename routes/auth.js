@@ -92,19 +92,24 @@ router.post('/login', isGuest, loginValidators, async (req, res) => {
 const registerValidators = [
     body('email').isEmail().withMessage('Введите корректный email.')
         .custom(async (value, { req }) => {
-            const userResult = await pool.query('SELECT 1 FROM users WHERE email = $1', [value]);
+            const userResult = await pool.query('SELECT userid FROM users WHERE email = $1', [value]);
             if (userResult.rows.length > 0) {
-                return Promise.reject('Этот email уже занят.');
+                throw new Error('Этот email уже занят.');
             }
+            return true;
         }).normalizeEmail(),
+
     body('nickname', 'Никнейм должен быть не менее 2 символов.').isLength({ min: 2 }).trim()
         .custom(async (value, { req }) => {
-            const userResult = await pool.query('SELECT 1 FROM users WHERE nickname = $1', [value]);
+            const userResult = await pool.query('SELECT userid FROM users WHERE nickname = $1', [value]);
             if (userResult.rows.length > 0) {
-                return Promise.reject('Этот никнейм уже занят.');
+                throw new Error('Этот никнейм уже занят.');
             }
+            return true;
         }),
+
     body('password', 'Пароль должен быть минимум 6 символов.').isLength({ min: 6 }).trim(),
+
     body('confirm').custom((value, { req }) => {
         if (value !== req.body.password) {
             throw new Error('Пароли не совпадают.');
@@ -125,16 +130,46 @@ router.post('/register', isGuest, registerValidators, async (req, res) => {
 
     try {
         const hashPassword = await bcrypt.hash(password, 10);
+
+        // Вставляем пользователя с явным указанием ID (используем MAX + 1)
         const insertQuery = `
-            INSERT INTO users (email, nickname, password, firstname, lastname, phone, role)
-            VALUES ($1, $2, $3, $4, $5, $6, 'Пользователь')
+            INSERT INTO users (userid, email, nickname, password, firstname, lastname, phone, role)
+            VALUES (
+                (SELECT COALESCE(MAX(userid), 0) + 1 FROM users),
+                $1, $2, $3, $4, $5, $6, 'Пользователь'
+            )
             RETURNING userid`;
 
-        await pool.query(insertQuery, [email, nickname, hashPassword, firstName || null, lastName || null , phone || null]);
+        const result = await pool.query(insertQuery, [
+            email,
+            nickname,
+            hashPassword,
+            firstName || null,
+            lastName || null,
+            phone || null
+        ]);
+
+        console.log('✅ Новый пользователь зарегистрирован. ID:', result.rows[0].userid);
         res.redirect('/auth/login');
+
     } catch (e) {
         console.error('Registration failed:', e);
-        req.flash('registerError', 'Ошибка регистрации на сервере.');
+
+        if (e.code === '23505') {
+            if (e.detail.includes('email')) {
+                req.flash('registerError', 'Этот email уже используется.');
+            } else if (e.detail.includes('nickname')) {
+                req.flash('registerError', 'Этот никнейм уже используется.');
+            } else if (e.detail.includes('phone')) {
+                req.flash('registerError', 'Этот телефон уже используется.');
+            } else {
+                req.flash('registerError', 'Ошибка уникальности данных.');
+            }
+        } else {
+            req.flash('registerError', 'Ошибка регистрации на сервере.');
+        }
+
+        req.flash('registerData', { email, nickname, firstName, lastName, phone });
         res.redirect('/auth/register');
     }
 });

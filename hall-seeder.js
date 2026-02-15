@@ -56,6 +56,7 @@ async function setAdmin() {
         const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
+        // Сначала проверяем существование пользователя
         const checkUserQuery = `
             SELECT userid FROM users WHERE email = $1;
         `;
@@ -65,6 +66,7 @@ async function setAdmin() {
         let result;
 
         if (existingUser.rows.length > 0) {
+            // Обновляем существующего пользователя (без изменения ID)
             const updateUserQuery = `
                 UPDATE users 
                 SET password = $1, nickname = $2, role = $3
@@ -77,6 +79,7 @@ async function setAdmin() {
                 'Администратор',
                 'ilya.golovatskiy@gmail.com'
             ]);
+            console.log('✅ Администратор обновлён. ID:', result.rows[0].userid);
         } else {
             // Вставляем нового пользователя (используем MAX + 1 для ID)
             const insertUserQuery = `
@@ -93,9 +96,9 @@ async function setAdmin() {
                 'admin',
                 'Администратор'
             ]);
+            console.log('✅ Администратор создан. ID:', result.rows[0].userid);
         }
 
-        console.log('✅ Администратор успешно создан/обновлён. ID:', result.rows[0].userid);
         console.log('🔑 Логин: ilya.golovatskiy@gmail.com');
         console.log('🔑 Пароль: 123456');
 

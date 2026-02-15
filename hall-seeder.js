@@ -50,32 +50,50 @@ async function seedDefaultHall() {
 }
 
 
-async function setAdmin(){
+async function setAdmin() {
     try {
         const plainPassword = '123456';
         const bcrypt = require('bcrypt');
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-        console.log('Пароль для админа:', plainPassword);
-        console.log('Хешированный пароль:', hashedPassword);
-
-        const setAdminQuery = `
-            INSERT INTO users(email, password, nickname, role) 
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (email) 
-            DO UPDATE SET 
-                password = EXCLUDED.password,
-                nickname = EXCLUDED.nickname,
-                role = EXCLUDED.role
-            RETURNING userid;
+        const checkUserQuery = `
+            SELECT userid FROM users WHERE email = $1;
         `;
 
-        const result = await db.query(setAdminQuery, [
-            'ilya.golovatskiy@gmail.com',
-            hashedPassword,
-            'admin',
-            'Администратор'
-        ]);
+        const existingUser = await db.query(checkUserQuery, ['ilya.golovatskiy@gmail.com']);
+
+        let result;
+
+        if (existingUser.rows.length > 0) {
+            const updateUserQuery = `
+                UPDATE users 
+                SET password = $1, nickname = $2, role = $3
+                WHERE email = $4
+                RETURNING userid;
+            `;
+            result = await db.query(updateUserQuery, [
+                hashedPassword,
+                'admin',
+                'Администратор',
+                'ilya.golovatskiy@gmail.com'
+            ]);
+        } else {
+            // Вставляем нового пользователя (используем MAX + 1 для ID)
+            const insertUserQuery = `
+                INSERT INTO users(userid, email, password, nickname, role)
+                VALUES (
+                    (SELECT COALESCE(MAX(userid), 0) + 1 FROM users),
+                    $1, $2, $3, $4
+                )
+                RETURNING userid;
+            `;
+            result = await db.query(insertUserQuery, [
+                'ilya.golovatskiy@gmail.com',
+                hashedPassword,
+                'admin',
+                'Администратор'
+            ]);
+        }
 
         console.log('✅ Администратор успешно создан/обновлён. ID:', result.rows[0].userid);
         console.log('🔑 Логин: ilya.golovatskiy@gmail.com');

@@ -61,9 +61,25 @@
         <hr class="section-divider">
 
         {{!-- Форма удаления --}}
-        <form action="/admin/delete-director/{{director.directorid}}" method="POST" class="delete-form" onsubmit="return confirm('Вы уверены, что хотите обнулить профиль режиссера {{director.name}}? Это действие необратимо!');">
-            <button type="submit" class="btn btn-delete">Обнулить профиль</button>
-        </form>
+        {{#if isEdit}}
+            <hr class="section-divider">
+
+            {{!-- Форма удаления --}}
+            <div class="delete-section">
+                <h2 class="delete-title">Опасная зона</h2>
+                <p class="delete-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Удаление режиссера возможно только если у него нет фильмов в базе.
+                </p>
+
+                <form action="/admin/delete-director/{{director.directorid}}" method="POST"
+                      onsubmit="return confirm('Вы уверены, что хотите полностью удалить режиссера {{director.name}}? Это действие необратимо!');">
+                    <button type="submit" class="btn btn-delete">
+                        <i class="fas fa-trash-alt"></i> Полностью удалить режиссера
+                    </button>
+                </form>
+            </div>
+        {{/if}}
     </div>
 </div>
 
@@ -262,9 +278,58 @@
         opacity: 0.5;
     }
 
-    /* Форма удаления */
-    .delete-form {
-        margin-top: 20px;
+    .delete-section {
+        background-color: rgba(220, 53, 69, 0.05);
+        border: 1px solid var(--error-color);
+        border-radius: 8px;
+        padding: 25px;
+        margin-top: 30px;
+    }
+
+    .delete-title {
+        color: var(--error-color);
+        font-size: 20px;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-weight: bold;
+    }
+
+    .delete-warning {
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: rgba(220, 53, 69, 0.1);
+        border-radius: 6px;
+        border-left: 4px solid var(--error-color);
+    }
+
+    .delete-warning i {
+        color: var(--error-color);
+        margin-right: 8px;
+    }
+
+    .btn-delete {
+        background-color: var(--error-color);
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-delete:hover {
+        background-color: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-delete:active {
+        transform: translateY(0);
     }
 
     /* Сообщения */

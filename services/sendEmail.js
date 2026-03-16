@@ -230,7 +230,6 @@ ${refundInfoText}
 // Функция для отправки письма о сбросе пароля
 async function sendPasswordResetEmail(email, token) {
     const resetLink = `${keys.BASE_URL}/auth/reset-password?token=${token}`;
-
     const mailOptions = {
         to: email,
         from: keys.EMAIL_FROM,

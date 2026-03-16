@@ -1,10 +1,16 @@
 <div class="page-container">
     <h1 class="page-title">{{title}}</h1>
 
+    {{#if searchTitle}}
+        <div class="search-results-info">
+            <p>Результаты поиска по запросу: <strong>"{{searchTitle}}"</strong></p>
+        </div>
+    {{/if}}
+
     <div class="movie-grid">
         {{#each movies}}
-            <div class="movie-card {{#unless this.isactive}}movie-card-inactive{{/unless}}">
-                <a href="/movies/{{this.movieid}}" class="card-link-content">
+            <div class="movie-card {{#unless ../isOnline}}{{#unless this.isactive}}movie-card-inactive{{/unless}}{{/unless}}">
+                <a href="/movies/{{this.movieid}}{{#if ../isOnline}}?view=movie{{/if}}" class="card-link-content">
                     <div class="poster-container">
                         <img src="{{this.posterurl}}" alt="{{this.title}}" class="movie-poster">
                         {{#if this.agerestriction}}
@@ -13,19 +19,25 @@
                             </div>
                         {{/if}}
                     </div>
+
                     <div class="movie-info">
                         <h3 class="movie-title">{{this.title}}</h3>
 
-                        {{#unless this.isactive}}
-                            <span class="status-badge badge-inactive">Скоро</span>
+                        {{#if ../isOnline}}
+                        {{!-- В онлайне не показываем статус --}}
                         {{else}}
-                            <span class="status-badge badge-active">В прокате</span>
-                        {{/unless}}
+                            {{#unless this.isactive}}
+                                <span class="status-badge badge-inactive">Скоро</span>
+                            {{else}}
+                                <span class="status-badge badge-active">В прокате</span>
+                            {{/unless}}
+                        {{/if}}
 
                         <p class="movie-meta">
                             <span>{{this.genre}}</span> |
                             <span>{{this.durationmin}} мин.</span>
                         </p>
+
                         <div class="movie-rating">
                             Рейтинг:
                             {{#if this.ratingavg}}
@@ -34,21 +46,46 @@
                                 Нет
                             {{/if}}
                         </div>
+
+                        {{#if ../isOnline}}
+                            {{#if this.qualities}}
+                                <div class="qualities-info">
+                                    {{#each this.qualities}}
+                                        <span class="quality-badge">{{this}}</span>
+                                    {{/each}}
+                                </div>
+                            {{/if}}
+                        {{/if}}
                     </div>
                 </a>
+
                 <div class="card-button-wrapper">
-                    {{#if this.isactive}}
-                        {{#if this.hassessions}}
-                            <a href="/movies/{{this.movieid}}/select-time" class="btn btn-secondary">Купить билет ({{this.price}} BYN)</a>
+                    {{#if ../isOnline}}
+                        {{#if this.onlineenabled}}
+                            <a href="/movies/{{this.movieid}}?view=movie" class="btn btn-primary">
+                                <i class="fas fa-play"></i> Смотреть онлайн
+                            </a>
                         {{else}}
                             <button class="btn btn-secondary" disabled>
-                                Нет сеансов
+                                Недоступно
                             </button>
                         {{/if}}
                     {{else}}
-                        <button class="btn btn-secondary" disabled>
-                            Скоро в прокате
-                        </button>
+                        {{#if this.isactive}}
+                            {{#if this.hassessions}}
+                                <a href="/movies/{{this.movieid}}/select-time" class="btn btn-secondary">
+                                    Купить билет ({{this.price}} BYN)
+                                </a>
+                            {{else}}
+                                <button class="btn btn-secondary" disabled>
+                                    Нет сеансов
+                                </button>
+                            {{/if}}
+                        {{else}}
+                            <button class="btn btn-secondary" disabled>
+                                Скоро в прокате
+                            </button>
+                        {{/if}}
                     {{/if}}
                 </div>
             </div>
@@ -192,6 +229,29 @@
     .age-16 { background-color: #F44336; }
     .age-18 { background-color: #000000; }
 
+    /* Бейдж онлайн */
+    .online-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background-color: var(--info-color);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        border: 2px solid white;
+    }
+
+    .online-badge i {
+        font-size: 18px;
+        margin-left: 2px;
+    }
+
     /* Оверлей "Скоро" */
     .coming-soon-overlay {
         position: absolute;
@@ -250,15 +310,11 @@
         gap: 10px;
     }
 
-    .movie-genre {
+    .movie-meta span {
         background-color: var(--bg-primary);
         padding: 4px 10px;
         border-radius: 20px;
         font-size: 0.85rem;
-    }
-
-    .movie-duration {
-        font-weight: 500;
     }
 
     .movie-rating {
@@ -270,20 +326,10 @@
         font-size: 0.95rem;
     }
 
-    .rating-value {
+    .movie-rating span:last-child {
         color: #f5c518;
         font-weight: bold;
         font-size: 1.1rem;
-    }
-
-    .rating-max {
-        color: var(--text-muted);
-        font-size: 0.9rem;
-    }
-
-    .no-rating {
-        font-style: italic;
-        color: var(--text-muted);
     }
 
     /* Бейджи статусов */
@@ -299,18 +345,38 @@
         letter-spacing: 0.5px;
         margin-top: auto;
         align-self: flex-start;
+        margin-bottom: 12px;
     }
 
-    .status-active {
-        background-color: rgba(40, 167, 69, 0.2);
+    .badge-active {
+        background-color: rgba(40, 167, 69, 0.15);
         color: var(--success-color);
         border: 1px solid rgba(40, 167, 69, 0.3);
     }
 
-    .status-inactive {
-        background-color: rgba(255, 193, 7, 0.2);
+    .badge-inactive {
+        background-color: rgba(255, 193, 7, 0.15);
         color: var(--warning-color);
         border: 1px solid rgba(255, 193, 7, 0.3);
+    }
+
+    /* Качества */
+    .qualities-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .quality-badge {
+        background-color: var(--bg-primary);
+        color: var(--text-secondary);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border: 1px solid var(--border-color);
     }
 
     /* Кнопка */
@@ -334,6 +400,7 @@
         transition: all 0.3s ease;
         text-decoration: none;
         position: relative;
+        box-sizing: border-box;
     }
 
     .btn-primary {
@@ -347,41 +414,24 @@
         box-shadow: 0 6px 20px rgba(229, 9, 20, 0.3);
     }
 
-    .btn-primary:active {
-        transform: translateY(0);
-    }
-
-    .btn-disabled {
-        background-color: var(--border-color);
-        color: var(--text-muted);
-        cursor: not-allowed;
-        opacity: 0.7;
-    }
-
-    .ticket-price {
-        margin-left: auto;
-        font-weight: bold;
-        background-color: rgba(255, 255, 255, 0.2);
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.9rem;
-    }
-
     .btn-secondary {
         background-color: var(--border-color);
         color: var(--text-primary);
-        padding: 10px 20px;
-        border-radius: 6px;
-        text-decoration: none;
-        display: inline-block;
-        margin-top: 20px;
-        transition: all 0.3s ease;
     }
 
-    .btn-secondary:hover {
+    .btn-secondary:hover:not(:disabled) {
         background-color: var(--border-light);
         transform: translateY(-2px);
         box-shadow: 0 4px 15px var(--shadow-color);
+    }
+
+    .btn-secondary:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .btn i {
+        font-size: 16px;
     }
 
     /* Состояние пустого списка */
@@ -398,7 +448,7 @@
 
     .empty-list p {
         font-size: 1.2rem;
-        margin: 10px 0 20px 0;
+        margin: 0;
         color: var(--text-primary);
     }
 
@@ -456,6 +506,17 @@
             padding: 10px 15px;
             font-size: 0.95rem;
         }
+
+        .online-badge {
+            width: 35px;
+            height: 35px;
+            top: 10px;
+            right: 10px;
+        }
+
+        .online-badge i {
+            font-size: 16px;
+        }
     }
 
     @media (max-width: 576px) {
@@ -488,11 +549,6 @@
             top: 10px;
             left: 10px;
         }
-
-        .coming-soon-overlay span {
-            font-size: 1.2rem;
-            padding: 8px 15px;
-        }
     }
 
     @media (max-width: 480px) {
@@ -516,14 +572,6 @@
 
         .empty-list {
             padding: 40px 15px;
-        }
-
-        .empty-list i {
-            font-size: 48px;
-        }
-
-        .empty-list p {
-            font-size: 1.1rem;
         }
     }
 </style>

@@ -123,6 +123,10 @@
                 <textarea id="description" name="description" rows="5" required>{{movieData.description}}</textarea>
             </div>
 
+            <div class="active-movies-info">
+                Всего в прокате: {{activeMoviesCount}} фильмов
+            </div>
+
             <div class="form-group checkbox-group">
                 <input type="checkbox" id="isActive" name="isActive" {{#if movieData.isActive}}checked{{/if}}>
                 <label for="isActive">Активен в прокате</label>

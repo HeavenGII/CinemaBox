@@ -34,31 +34,84 @@
 
         <hr class="section-divider">
 
-        {{!-- Секция фильмографии --}}
+        {{!-- Секция фильмографии с фильтрами --}}
         <section class="main-content">
-            <h2 class="main-content-title">Фильмография ({{movies.length}})</h2>
+            <div class="filmography-header">
+                <h2 class="main-content-title">Фильмография ({{totalMovies}})</h2>
 
-            {{#if movies.length}}
-                <div class="movies-grid">
-                    {{#each movies}}
-                        <div class="movie-card">
+                {{!-- Кнопки-фильтры --}}
+                <div class="filter-tabs">
+                    <button class="filter-tab active" data-filter="all">
+                        <span class="tab-icon">📽️</span>
+                        Все фильмы
+                        <span class="tab-count">{{totalMovies}}</span>
+                    </button>
+                    <button class="filter-tab" data-filter="active">
+                        <span class="tab-icon">🎬</span>
+                        В прокате
+                        <span class="tab-count">{{activeCount}}</span>
+                    </button>
+                    <button class="filter-tab" data-filter="online">
+                        <span class="tab-icon">🌐</span>
+                        Доступно онлайн
+                        <span class="tab-count">{{onlineCount}}</span>
+                    </button>
+                    <button class="filter-tab" data-filter="upcoming">
+                        <span class="tab-icon">⏳</span>
+                        Скоро
+                        <span class="tab-count">{{upcomingCount}}</span>
+                    </button>
+                </div>
+            </div>
+
+            {{#if totalMovies}}
+                <div class="movies-grid" id="movies-grid">
+                    {{#each allMovies}}
+                        <div class="movie-card filter-item
+                            {{#if this.isactive}}filter-active{{/if}}
+                            {{#if this.onlineenabled}}filter-online{{/if}}
+                            {{#if (and (not this.isactive) (not this.onlineenabled))}}filter-upcoming{{/if}}">
+
                             <a href="/movies/{{movieid}}" class="movie-card-link">
-                                <div class="movie-poster-container">
-                                    <img src="{{posterurl}}" alt="{{title}}" class="movie-poster" onerror="this.onerror=null;this.src='https://placehold.co/300x400/2c2c2c/f0f0f0?text=Нет+Постера';"/>
-                                    <span class="rating-badge">{{rating}} ⭐</span>
+                                <div class="poster-container">
+                                    <img src="{{posterurl}}" alt="{{title}}" class="movie-poster">
                                     {{#if agerestriction}}
                                         <div class="age-restriction-badge-small age-{{agerestriction}}">
                                             {{agerestriction}}+
                                         </div>
                                     {{/if}}
+
+                                    {{!-- Оверлей "Скоро" --}}
+                                    {{#if (and (not this.isactive) (not this.onlineenabled))}}
+                                        <div class="coming-soon-overlay">
+                                            <span>Скоро</span>
+                                        </div>
+                                    {{/if}}
                                 </div>
                             </a>
-                            <div class="movie-card-info">
-                                <h3 class="movie-title">{{title}}</h3>
-                                <p class="movie-genre">{{genre}}</p>
-                                {{#if durationmin}}
-                                    <p class="movie-duration">{{formatDuration durationmin}}</p>
-                                {{/if}}
+
+                            <span class="rating-badge">{{rating}} ⭐</span>
+
+                            <div class="card-info">
+                                <div>
+                                    <h3 class="movie-title">{{title}}</h3>
+                                    <p class="movie-genre">{{genre}} • {{formatDuration durationmin}}</p>
+
+                                    {{!-- Статус --}}
+                                    {{#if this.isactive}}
+                                        <p class="status-text status-active">
+                                            <i class="fas fa-play-circle"></i> В прокате
+                                        </p>
+                                    {{else if this.onlineenabled}}
+                                        <p class="status-text status-online">
+                                            <i class="fas fa-globe"></i> Доступно онлайн
+                                        </p>
+                                    {{else}}
+                                        <p class="status-text status-upcoming">
+                                            <i class="fas fa-clock"></i> Скоро
+                                        </p>
+                                    {{/if}}
+                                </div>
                             </div>
                         </div>
                     {{/each}}
@@ -70,11 +123,11 @@
                 </div>
             {{/if}}
         </section>
-
     </div>
 </div>
 
 <style>
+    /* ===== ОСНОВНЫЕ СТИЛИ ===== */
     .main-wrapper {
         background-color: var(--bg-primary);
         color: var(--text-primary);
@@ -89,7 +142,7 @@
         padding: 0 20px;
     }
 
-    /* Стили для секции режиссера */
+    /* ===== СТИЛИ ДЛЯ СЕКЦИИ РЕЖИССЕРА ===== */
     .director-details-hero {
         display: flex;
         gap: 50px;
@@ -170,14 +223,6 @@
         text-align: justify;
     }
 
-    .biography-content p {
-        margin: 0 0 20px 0;
-    }
-
-    .biography-content p:last-child {
-        margin-bottom: 0;
-    }
-
     .edit-btn {
         margin-top: 30px;
         display: inline-flex;
@@ -200,11 +245,7 @@
         box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
     }
 
-    .edit-btn:active {
-        transform: translateY(0);
-    }
-
-    /* Разделитель */
+    /* ===== РАЗДЕЛИТЕЛЬ ===== */
     .section-divider {
         border: 0;
         height: 1px;
@@ -213,49 +254,103 @@
         opacity: 0.5;
     }
 
-    /* Секция фильмографии */
+    /* ===== СЕКЦИЯ ФИЛЬМОГРАФИИ С ФИЛЬТРАМИ ===== */
     .main-content {
         margin-top: 30px;
     }
 
+    .filmography-header {
+        margin-bottom: 30px;
+    }
+
     .main-content-title {
         font-size: 32px;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         color: var(--text-primary);
         font-weight: bold;
     }
 
-    .no-movies-message {
-        text-align: center;
-        padding: 60px 20px;
-        color: var(--text-muted);
+    /* ===== КНОПКИ-ФИЛЬТРЫ ===== */
+    .filter-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 30px;
         background-color: var(--bg-card);
-        border-radius: 10px;
-        border: 2px dashed var(--border-color);
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
     }
 
-    .no-movies-message p {
+    .filter-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background-color: transparent;
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 0 1 auto;
+    }
+
+    .filter-tab:hover {
+        background-color: var(--bg-input-focus);
+        color: var(--text-primary);
+    }
+
+    .filter-tab.active {
+        background-color: var(--accent-primary);
+        color: white;
+    }
+
+    .filter-tab.active .tab-count {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
+    .tab-icon {
         font-size: 18px;
-        margin: 0;
     }
 
-    /* Сетка фильмов */
+    .tab-count {
+        background-color: var(--bg-primary);
+        color: var(--text-secondary);
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    /* ===== СЕТКА ФИЛЬМОВ ===== */
     .movies-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 30px;
+        transition: opacity 0.3s ease;
     }
 
-    /* Стили карточки фильма */
+    .movies-grid.filtering {
+        opacity: 0.7;
+    }
+
+    /* ===== КАРТОЧКА ФИЛЬМА ===== */
     .movie-card {
         background-color: var(--bg-card);
-        border-radius: 10px;
+        border-radius: 8px;
         overflow: hidden;
         box-shadow: 0 4px 15px var(--shadow-color);
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        height: 400px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+        position: relative;
         display: flex;
         flex-direction: column;
+        height: 100%;
+        min-height: 420px;
     }
 
     .movie-card:hover {
@@ -267,34 +362,39 @@
         text-decoration: none;
         color: inherit;
         display: block;
-        flex-grow: 1;
     }
 
-    .movie-poster-container {
+    /* Контейнер постера */
+    .poster-container {
         position: relative;
         width: 100%;
-        height: 300px;
+        height: 350px;
+        background-color: var(--bg-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
         overflow: hidden;
     }
 
     .movie-poster {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         display: block;
         transition: transform 0.3s ease;
+        background-color: var(--bg-primary);
     }
 
     .movie-card:hover .movie-poster {
-        transform: scale(1.05);
+        transform: scale(1.02);
     }
 
-    /* Бейдж рейтинга */
+    /* ===== БЕЙДЖИ ===== */
     .rating-badge {
         position: absolute;
         top: 10px;
         right: 10px;
-        background-color: var(--accent-primary);
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
         color: white;
         padding: 6px 12px;
         border-radius: 6px;
@@ -304,7 +404,6 @@
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     }
 
-    /* Бейдж возрастного ограничения */
     .age-restriction-badge-small {
         position: absolute;
         top: 10px;
@@ -329,17 +428,45 @@
     .age-16 { background-color: #F44336; }
     .age-18 { background-color: #000000; }
 
-    /* Информация о фильме */
-    .movie-card-info {
+    /* ===== ОВЕРЛЕЙ ДЛЯ СКОРЫХ ПРЕМЬЕР ===== */
+    .coming-soon-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9));
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 5;
+        pointer-events: none;
+    }
+
+    .coming-soon-overlay span {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        padding: 10px 20px;
+        border: 2px solid white;
+        border-radius: 8px;
+        background-color: rgba(0, 0, 0, 0.5);
+        transform: rotate(-5deg);
+    }
+
+    /* ===== ИНФОРМАЦИЯ О ФИЛЬМЕ ===== */
+    .card-info {
         padding: 15px;
-        flex-grow: 1;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
+        flex-grow: 1;
     }
 
     .movie-title {
-        font-size: 18px;
+        font-size: 1.2rem;
         margin: 0 0 8px 0;
         color: var(--text-primary);
         font-weight: 600;
@@ -353,24 +480,60 @@
     }
 
     .movie-genre {
-        font-size: 14px;
-        color: var(--text-muted);
-        margin: 0 0 8px 0;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin: 0;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
         text-overflow: ellipsis;
+        line-height: 1.4;
     }
 
-    .movie-duration {
-        font-size: 13px;
-        color: var(--text-secondary);
-        margin: 0;
+    /* ===== СТАТУСЫ ===== */
+    .status-text {
+        font-size: 0.85rem;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
         font-weight: 500;
     }
 
-    /* Адаптивность */
+    .status-active {
+        color: var(--success-color);
+    }
+
+    .status-upcoming {
+        color: var(--warning-color);
+    }
+
+    .status-online {
+        color: var(--info-color);
+    }
+
+    .status-active i, .status-upcoming i, .status-online i {
+        font-size: 14px;
+    }
+
+    /* ===== СООБЩЕНИЕ О ПУСТОМ СПИСКЕ ===== */
+    .no-movies-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-muted);
+        background-color: var(--bg-card);
+        border-radius: 10px;
+        border: 2px dashed var(--border-color);
+    }
+
+    .no-movies-message p {
+        font-size: 18px;
+        margin: 0;
+        color: var(--text-primary);
+    }
+
+    /* ===== АДАПТИВНОСТЬ ===== */
     @media (max-width: 1024px) {
         .director-details-hero {
             gap: 40px;
@@ -383,6 +546,15 @@
         .director-name {
             font-size: 42px;
         }
+
+        .movies-grid {
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 25px;
+        }
+
+        .poster-container {
+            height: 280px;
+        }
     }
 
     @media (max-width: 768px) {
@@ -393,6 +565,7 @@
         .director-details-hero {
             flex-direction: column;
             padding: 30px 0;
+            gap: 30px;
         }
 
         .director-photo-container {
@@ -410,10 +583,6 @@
             justify-content: center;
         }
 
-        .director-biography {
-            margin-top: 20px;
-        }
-
         .biography-title {
             font-size: 24px;
         }
@@ -422,9 +591,31 @@
             font-size: 28px;
         }
 
+        .filter-tabs {
+            justify-content: center;
+        }
+
+        .filter-tab {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
         .movies-grid {
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
             gap: 20px;
+        }
+
+        .poster-container {
+            height: 250px;
+        }
+
+        .movie-card {
+            min-height: 380px;
+        }
+
+        .coming-soon-overlay span {
+            font-size: 1.2rem;
+            padding: 8px 15px;
         }
     }
 
@@ -446,21 +637,34 @@
             text-align: center;
         }
 
+        .filter-tabs {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-tab {
+            width: 100%;
+            justify-content: center;
+        }
+
         .movies-grid {
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: 1fr;
+            gap: 20px;
         }
 
-        .movie-poster-container {
-            height: 250px;
-        }
-
-        .movie-card {
+        .poster-container {
             height: 350px;
         }
 
-        .movie-title {
-            font-size: 16px;
+        .movie-card {
+            max-width: 280px;
+            margin: 0 auto;
+            min-height: 450px;
+        }
+
+        .coming-soon-overlay span {
+            font-size: 1.1rem;
+            padding: 6px 12px;
         }
 
         .edit-btn {
@@ -469,3 +673,104 @@
         }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterTabs = document.querySelectorAll('.filter-tab');
+        const moviesGrid = document.getElementById('movies-grid');
+        const movieCards = document.querySelectorAll('.movie-card');
+
+        // Функция для подсчета видимых карточек
+        function updateVisibleCount() {
+            const visibleCards = document.querySelectorAll('.movie-card:not([style*="display: none"])');
+            const activeTab = document.querySelector('.filter-tab.active');
+
+            if (activeTab) {
+                const tabCount = activeTab.querySelector('.tab-count');
+                if (tabCount) {
+                    tabCount.textContent = visibleCards.length;
+                }
+            }
+        }
+
+        // Функция фильтрации
+        function filterMovies(filterType) {
+            // Добавляем класс анимации
+            moviesGrid.classList.add('filtering');
+
+            // Небольшая задержка для анимации
+            setTimeout(() => {
+                movieCards.forEach(card => {
+                    switch(filterType) {
+                        case 'all':
+                            card.style.display = 'flex';
+                            break;
+                        case 'active':
+                            if (card.classList.contains('filter-active')) {
+                                card.style.display = 'flex';
+                            } else {
+                                card.style.display = 'none';
+                            }
+                            break;
+                        case 'online':
+                            if (card.classList.contains('filter-online')) {
+                                card.style.display = 'flex';
+                            } else {
+                                card.style.display = 'none';
+                            }
+                            break;
+                        case 'upcoming':
+                            if (card.classList.contains('filter-upcoming')) {
+                                card.style.display = 'flex';
+                            } else {
+                                card.style.display = 'none';
+                            }
+                            break;
+                    }
+                });
+
+                // Убираем класс анимации
+                moviesGrid.classList.remove('filtering');
+
+                // Обновляем счетчики
+                updateVisibleCount();
+            }, 150);
+        }
+
+        // Обработчики кликов по кнопкам
+        filterTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Убираем активный класс у всех кнопок
+                filterTabs.forEach(t => t.classList.remove('active'));
+
+                // Добавляем активный класс текущей кнопке
+                this.classList.add('active');
+
+                // Получаем тип фильтра
+                const filterType = this.dataset.filter;
+
+                // Применяем фильтр
+                filterMovies(filterType);
+            });
+        });
+
+        // Инициализация: показываем счетчики для каждой категории
+        function initializeCounters() {
+            const counts = {
+                all: movieCards.length,
+                active: document.querySelectorAll('.filter-active').length,
+                online: document.querySelectorAll('.filter-online').length,
+                upcoming: document.querySelectorAll('.filter-upcoming').length
+            };
+
+            filterTabs.forEach(tab => {
+                const filterType = tab.dataset.filter;
+                const countSpan = tab.querySelector('.tab-count');
+                if (countSpan && counts[filterType] !== undefined) {
+                    countSpan.textContent = counts[filterType];
+                }
+            });
+        }
+        initializeCounters();
+    });
+</script>

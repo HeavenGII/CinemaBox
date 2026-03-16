@@ -386,13 +386,30 @@ function validateFileType(file, fieldName) {
     return null;
 }
 
-router.get('/add',adminMiddleware, (req, res) => {
-    res.render('admin/add', {
-        title: 'Добавить новый фильм',
-        movieData: req.flash('movieData')[0] || {},
-        error: req.flash('error'),
-        success: req.flash('success')
-    });
+router.get('/add', adminMiddleware, async (req, res) => {
+    try {
+        const activeCountResult = await pool.query(
+            'SELECT COUNT(*) as count FROM movies WHERE isactive = true'
+        );
+        const activeMoviesCount = parseInt(activeCountResult.rows[0].count);
+
+        res.render('admin/add', {
+            title: 'Добавить новый фильм',
+            movieData: req.flash('movieData')[0] || {},
+            error: req.flash('error'),
+            success: req.flash('success'),
+            activeMoviesCount: activeMoviesCount
+        });
+    } catch (e) {
+        console.error('Ошибка при загрузке страницы добавления:', e);
+        res.render('admin/add', {
+            title: 'Добавить новый фильм',
+            movieData: req.flash('movieData')[0] || {},
+            error: req.flash('error'),
+            success: req.flash('success'),
+            activeMoviesCount: 0
+        });
+    }
 });
 
 router.post('/add', adminMiddleware,
@@ -580,12 +597,18 @@ router.get('/movies/:movieid/edit', adminMiddleware,async (req, res) => {
 
         const flashedData = req.flash('movieData')[0];
 
+        const activeCountResult = await pool.query(
+            'SELECT COUNT(*) as count FROM movies WHERE isactive = true'
+        );
+        const activeMoviesCount = parseInt(activeCountResult.rows[0].count);
+
         res.render('admin/edit', {
             title: `Редактировать фильм: ${movieData.title}`,
             isEdit: true,
             movieData: flashedData || movieData,
             error: req.flash('error'),
-            success: req.flash('success')
+            success: req.flash('success'),
+            activeMoviesCount: activeMoviesCount
         });
 
     } catch (e) {
@@ -1400,60 +1423,61 @@ router.post('/delete-director/:directorid', adminMiddleware, async (req, res) =>
 
     if (!directorId || isNaN(parseInt(directorId))) {
         req.flash('error', 'Некорректный ID режиссера');
-        return res.redirect('/admin/directors');
+        return res.redirect('/');
     }
 
     const redirectUrl = `/director/${directorId}`;
-
     const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
 
+        // 1. Проверяем, есть ли фильмы у этого режиссера
+        const moviesCheck = await client.query(
+            'SELECT COUNT(*) as movie_count FROM movies WHERE directorid = $1',
+            [directorId]
+        );
+
+        const movieCount = parseInt(moviesCheck.rows[0].movie_count);
+
+        if (movieCount > 0) {
+            await client.query('ROLLBACK');
+            req.flash('error', `Невозможно удалить режиссера: у него есть ${movieCount} фильм(ов). Сначала удалите или переназначьте фильмы.`);
+            return res.redirect(redirectUrl);
+        }
+
+        // 2. Получаем информацию о режиссере (для удаления фото)
         const directorResult = await client.query(
-            'SELECT photourl FROM directors WHERE directorid = $1',
+            'SELECT photourl, name FROM directors WHERE directorid = $1',
             [directorId]
         );
 
         if (directorResult.rows.length === 0) {
             await client.query('ROLLBACK');
-            req.flash('error', 'Режиссер для архивации не найден.');
-            return res.redirect(redirectUrl);
+            req.flash('error', 'Режиссер не найден.');
+            return res.redirect('/admin/directors');
         }
 
-        const photoUrl = directorResult.rows[0].photourl;
+        const director = directorResult.rows[0];
+        const photoUrl = director.photourl;
 
-
-        await client.query(`
-            UPDATE directors
-            SET biography = NULL,
-                birthdate = NULL,
-                photourl = NULL
-            WHERE directorid = $1
-        `, [directorId]);
-
-
+        // 3. Удаляем режиссера из БД
+        await client.query('DELETE FROM directors WHERE directorid = $1', [directorId]);
 
         await client.query('COMMIT');
 
-
+        // 4. Удаляем фото из хранилища (если оно есть и это не внешняя ссылка)
         if (photoUrl && !photoUrl.startsWith('http')) {
-            const absolutePath = path.join(__dirname, '..', 'public', photoUrl);
-            fs.unlink(absolutePath, (err) => {
-                if (err) {
-                    console.error(`Не удалось удалить фото режиссера по пути ${absolutePath}:`, err);
-                } else {
-                    console.log(`✅ Фото режиссера успешно удалено: ${photoUrl}`);
-                }
-            });
+            deleteFile(photoUrl)
+                .catch(e => console.error('Не удалось удалить фото режиссера:', e));
         }
 
-        res.redirect(redirectUrl);
+        res.redirect('/'); // Редирект на список режиссеров (нужно создать)
 
     } catch (e) {
         await client.query('ROLLBACK');
-        console.error('❌ Ошибка архивации режиссера:', e);
-        req.flash('error', 'Произошла критическая ошибка сервера при архивации режиссера.');
+        console.error('❌ Ошибка удаления режиссера:', e);
+        req.flash('error', 'Произошла ошибка сервера при удалении режиссера.');
         res.redirect(redirectUrl);
     } finally {
         client.release();

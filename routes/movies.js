@@ -29,7 +29,8 @@ router.get('/', async (req, res) => {
                 m.ratingavg,
                 m.price,
                 m.isactive,
-                m.agerestriction,  -- ← ДОБАВЛЕНО!
+                m.agerestriction,
+                m.onlineenabled,
                 d.name AS directorname,
                 -- НОВОЕ ПОЛЕ: Проверяем наличие будущих сеансов для фильма
                 EXISTS (
@@ -51,7 +52,7 @@ router.get('/', async (req, res) => {
         // --- ЛОГИКА ФИЛЬТРАЦИИ ПО КАТЕГОРИИ ---
         if (category === 'soon') {
             // Если выбрано "Скоро", показываем только неактивные фильмы
-            whereClauses.push(`m.isactive = FALSE`);
+            whereClauses.push(`m.isactive = FALSE AND m.onlineenabled = FALSE`);
             title = 'Скоро в прокате';
             isHome = false;
             isSoon = true;
@@ -110,7 +111,7 @@ router.get('/:id', async (req, res) => {
                 m.movieid, m.title, m.description, m.durationmin, m.genre,
                 m.posterurl, m.trailerurl, m.releaseyear, m.ratingavg, m.price,
                 m.isactive, m.agerestriction,
-                m.onlineurl, m.onlineenabled,  -- ← ДОБАВЬТЕ ЭТИ ПОЛЯ!
+                m.onlineurl, m.onlineenabled,
                 d.name AS directorname, d.directorid
             FROM movies m
             JOIN directors d ON m.directorid = d.directorid

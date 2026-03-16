@@ -1,8 +1,19 @@
 <header class="header">
-
     <a href="/" class="logo">Cinema<span class="box-highlight">Вох</span></a>
+
+    <!-- Переключатель Афиша/Онлайн -->
+    <div class="view-toggle">
+        <a href="/" class="toggle-btn {{#if isHome}}active{{/if}}">
+            <i class="fas fa-film"></i>
+            <span>Премьера</span>
+        </a>
+        <a href="/online" class="toggle-btn {{#if isOnline}}active{{/if}}">
+            <i class="fas fa-play-circle"></i>
+            <span>Онлайн</span>
+        </a>
+    </div>
+
     <nav class="nav">
-        <a href="/" class="{{#if isHome}}active{{/if}}">Афиша</a>
         <a href="/movies?category=soon" class="{{#if isSoon}}active{{/if}}">Скоро</a>
         <a href="/shorts" class="{{#if isShorts}}active{{/if}}">Шортс</a>
 
@@ -12,28 +23,38 @@
             </button>
 
             <div class="filter-dropdown-content" id="filter-content">
-                <form id="filter-form" action="/" method="GET">
-
+                <form id="filter-form" action="/search" method="GET">
                     <h3>Поиск по параметрам</h3>
 
-                    <label for="filter-year">Год выпуска:</label>
-                    <input type="number" id="filter-year" name="year" placeholder="Например, 2023" min="1900" max="{{currentYear}}" value="{{filterYear}}">
+                    <div class="filter-group">
+                        <label for="filter-q">Название:</label>
+                        <input type="text" id="filter-q" name="q" placeholder="Название фильма" value="{{searchQuery}}">
+                    </div>
 
-                    <label for="filter-genre">Жанр:</label>
-                    <select id="filter-genre" name="genre">
-                        <option value="">Все жанры</option>
-                        {{#each allGenres}}
-                            <option value="{{this}}" {{#ifeq this filterGenre}}selected{{/ifeq}}>{{this}}</option>
-                        {{/each}}
-                    </select>
+                    <div class="filter-group">
+                        <label for="filter-year">Год выпуска:</label>
+                        <input type="number" id="filter-year" name="year" placeholder="Например, 2023" min="1900" max="{{currentYear}}" value="{{filterYear}}">
+                    </div>
 
-                    <label for="filter-rating">Рейтинг (от):</label>
-                    <input type="number" id="filter-rating" name="minRating" placeholder="От 4.0 до 5.0" min="0" max="5" step="0.1" value="{{filterMinRating}}">
+                    <div class="filter-group">
+                        <label for="filter-genre">Жанр:</label>
+                        <select id="filter-genre" name="genre">
+                            <option value="">Все жанры</option>
+                            {{#each allGenres}}
+                                <option value="{{this}}" {{#ifeq this ../filterGenre}}selected{{/ifeq}}>{{this}}</option>
+                            {{/each}}
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="filter-rating">Рейтинг (от):</label>
+                        <input type="number" id="filter-rating" name="minRating" placeholder="От 0.0 до 10.0" min="0" max="10" step="0.1" value="{{filterMinRating}}">
+                    </div>
 
                     <div class="filter-actions">
                         <button type="submit" class="apply-filter-btn">Применить</button>
                         {{#if isFilterApplied}}
-                            <button type="button" id="clear-filter-btn" class="clear-filter-btn">Сбросить</button>
+                            <a href="/search" class="clear-filter-btn">Сбросить</a>
                         {{/if}}
                     </div>
                 </form>
@@ -42,22 +63,26 @@
     </nav>
 
     <div class="header-search-container">
-        <form action="/" method="GET" class="search-form-header">
+        <form action="/search" method="GET" class="search-form-header">
             <input type="text"
-                   placeholder="Поиск фильмов..."
-                   name="searchTitle"
-                   value="{{searchTitle}}"
-                   aria-label="Поиск по названию">
-
+                   id="search-input"
+                   placeholder="Поиск фильмов и режиссёров..."
+                   name="q"
+                   value="{{searchQuery}}"
+                   aria-label="Поиск по названию"
+                   autocomplete="off">
             <button type="submit" class="search-button-header" title="Найти">
                 🔍
             </button>
-            {{#if searchTitle}}
-                <a href="/" class="clear-search-button-header" title="Сбросить поиск">
+            {{#if searchQuery}}
+                <a href="/search" class="clear-search-button-header" title="Сбросить поиск">
                     ×
                 </a>
             {{/if}}
         </form>
+
+        <!-- Контейнер для результатов автодополнения -->
+        <div class="autocomplete-results" id="autocomplete-results"></div>
     </div>
 
     <div class="user-controls">
@@ -76,6 +101,7 @@
                 </div>
             </div>
         {{/if}}
+
         <div class="theme-switcher">
             <button id="theme-toggle" class="theme-toggle-btn" title="Переключить тему">
                 <i class="material-icons theme-icon" id="theme-icon">dark_mode</i>
@@ -97,6 +123,7 @@
         {{/if}}
     </div>
 </header>
+
 <style>
     /* Стили для выпадающего меню администратора */
     .admin-dropdown {
@@ -284,6 +311,162 @@
     .light-theme .clear-filter-btn {
         color: #f0f0f0 !important;
     }
+
+    .view-toggle {
+        display: flex;
+        background-color: var(--bg-input);
+        border-radius: 30px;
+        padding: 4px;
+        margin: 0 20px;
+        border: 1px solid var(--border-color);
+    }
+
+    .toggle-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 20px;
+        border-radius: 25px;
+        text-decoration: none;
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+
+    .toggle-btn i {
+        font-size: 16px;
+    }
+
+    .toggle-btn.active {
+        background-color: var(--accent-primary);
+        color: white;
+        box-shadow: 0 4px 10px rgba(229, 9, 20, 0.3);
+    }
+
+    .toggle-btn:not(.active):hover {
+        background-color: var(--bg-card);
+        color: var(--text-primary);
+    }
+
+    /* Адаптивность */
+    @media (max-width: 1024px) {
+        .view-toggle {
+            margin: 10px 0;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .toggle-btn {
+            padding: 8px 15px;
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .view-toggle {
+            order: 3;
+            margin: 15px 0 5px;
+        }
+    }
+
+    .header-search-container {
+        position: relative;
+        flex-grow: 1;
+        max-width: 450px;
+        min-width: 200px;
+        margin: 0 20px;
+    }
+
+    .autocomplete-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background-color: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 8px 20px var(--shadow-color);
+        max-height: 400px;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .autocomplete-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        text-decoration: none;
+        color: var(--text-primary);
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.2s ease;
+        gap: 12px;
+    }
+
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+
+    .autocomplete-item:hover {
+        background-color: var(--bg-input-focus);
+    }
+
+    .autocomplete-poster {
+        width: 40px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 4px;
+        background-color: var(--bg-primary);
+    }
+
+    .autocomplete-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: var(--accent-primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .autocomplete-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .autocomplete-title {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .autocomplete-meta {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    /* Адаптивность */
+    @media (max-width: 768px) {
+        .autocomplete-results {
+            max-height: 300px;
+        }
+
+        .autocomplete-item {
+            padding: 10px 12px;
+        }
+
+        .autocomplete-poster {
+            width: 30px;
+            height: 45px;
+        }
+    }
 </style>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -352,5 +535,124 @@
                 });
             }
         }
+
+        // --- Логика для автодополнения поиска ---
+        const searchInput = document.getElementById('search-input');
+        const autocompleteResults = document.getElementById('autocomplete-results');
+        let searchTimeout;
+
+        if (!searchInput || !autocompleteResults) return;
+
+        // Функция для получения результатов поиска
+        async function fetchSearchResults(query) {
+            try {
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('Ошибка сети');
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                console.error('Ошибка при поиске:', error);
+                autocompleteResults.style.display = 'none';
+            }
+        }
+
+        // Функция для отображения результатов
+        function displayResults(results) {
+            autocompleteResults.innerHTML = '';
+
+            if (results.length === 0) {
+                autocompleteResults.style.display = 'none';
+                return;
+            }
+
+            results.forEach(item => {
+                const link = document.createElement('a');
+
+                if (item.type === 'movie') {
+                    link.href = `/movies/${item.id}`;
+                    link.className = 'autocomplete-item movie-item';
+
+                    // Для фильмов показываем постер
+                    if (item.poster) {
+                        const img = document.createElement('img');
+                        img.src = item.poster;
+                        img.alt = item.title;
+                        img.className = 'autocomplete-poster';
+                        img.onerror = function() { this.style.display = 'none'; };
+                        link.appendChild(img);
+                    }
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'autocomplete-info';
+
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'autocomplete-title';
+                    titleSpan.textContent = item.title;
+
+                    const metaSpan = document.createElement('span');
+                    metaSpan.className = 'autocomplete-meta';
+                    metaSpan.innerHTML = `🎬 Фильм ${item.year ? '• ' + item.year : ''} ${item.rating ? '• ' + item.rating + ' ⭐' : ''}`;
+
+                    infoDiv.appendChild(titleSpan);
+                    infoDiv.appendChild(metaSpan);
+                    link.appendChild(infoDiv);
+
+                } else if (item.type === 'director') {
+                    link.href = `/director/${item.id}`;
+                    link.className = 'autocomplete-item director-item';
+
+                    const iconSpan = document.createElement('span');
+                    iconSpan.className = 'autocomplete-icon';
+                    iconSpan.innerHTML = '🎬';
+                    link.appendChild(iconSpan);
+
+                    const infoDiv = document.createElement('div');
+                    infoDiv.className = 'autocomplete-info';
+
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'autocomplete-title';
+                    titleSpan.textContent = item.title;
+
+                    const metaSpan = document.createElement('span');
+                    metaSpan.className = 'autocomplete-meta';
+                    metaSpan.textContent = 'Режиссёр';
+
+                    infoDiv.appendChild(titleSpan);
+                    infoDiv.appendChild(metaSpan);
+                    link.appendChild(infoDiv);
+                }
+
+                autocompleteResults.appendChild(link);
+            });
+
+            autocompleteResults.style.display = 'block';
+        }
+
+        // Обработчик ввода
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                autocompleteResults.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                fetchSearchResults(query);
+            }, 300); // Задержка 300мс для оптимизации
+        });
+
+        // Скрываем результаты при клике вне
+        document.addEventListener('click', (e) => {
+            if (!searchInput.contains(e.target) && !autocompleteResults.contains(e.target)) {
+                autocompleteResults.style.display = 'none';
+            }
+        });
+
+        // Скрываем результаты при отправке формы
+        searchInput.form.addEventListener('submit', () => {
+            autocompleteResults.style.display = 'none';
+        });
     });
 </script>

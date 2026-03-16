@@ -2,7 +2,6 @@ const { Router } = require('express')
 const db = require('../db')
 const router = Router()
 
-
 router.get('/:directorId', async (req, res) => {
     const directorId = req.params.directorId;
 
@@ -24,28 +23,32 @@ router.get('/:directorId', async (req, res) => {
             return res.status(404).render('404', { title: 'Режиссер не найден' });
         }
 
+        // Получаем все фильмы режиссера
         const moviesQuery = `
             SELECT
-                movieid,
-                title,
-                posterurl,
-                releaseyear,
-                ratingavg,
-                genre -- <-- ДОБАВЛЕНО: Теперь выбираем жанр
-            FROM movies
-            WHERE directorid = $1
-            ORDER BY releaseyear DESC
+                m.movieid,
+                m.title,
+                m.posterurl,
+                m.releaseyear,
+                m.ratingavg as rating,
+                m.genre,
+                m.durationmin,
+                m.agerestriction,
+                m.isactive,
+                m.onlineenabled
+            FROM movies m
+            WHERE m.directorid = $1
+            ORDER BY 
+                m.releaseyear DESC
         `;
         const moviesResult = await db.query(moviesQuery, [directorId]);
 
-        const movies = moviesResult.rows.map(m => ({
-            movieid: m.movieid,
-            title: m.title,
-            posterurl: m.posterurl,
-            releaseyear: m.releaseyear,
-            rating: m.ratingavg,
-            genre: m.genre
-        }));
+        const allMovies = moviesResult.rows;
+
+        // Считаем количество фильмов в каждой категории
+        const activeCount = allMovies.filter(m => m.isactive).length;
+        const onlineCount = allMovies.filter(m => m.onlineenabled).length;
+        const upcomingCount = allMovies.filter(m => !m.isactive && !m.onlineenabled).length;
 
         const formattedBirthdate = director.birthdate
             ? new Date(director.birthdate).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })
@@ -57,12 +60,19 @@ router.get('/:directorId', async (req, res) => {
                 ...director,
                 birthdate: formattedBirthdate
             },
-            movies
+            totalMovies: allMovies.length,
+            activeCount,
+            onlineCount,
+            upcomingCount,
+            allMovies
         });
 
     } catch (e) {
         console.error(`Ошибка при загрузке страницы режиссера ID ${directorId}:`, e);
-        res.status(500).render('error', { title: 'Ошибка сервера', error: 'Не удалось загрузить информацию о режиссере.' });
+        res.status(500).render('error', {
+            title: 'Ошибка сервера',
+            error: 'Не удалось загрузить информацию о режиссере.'
+        });
     }
 });
 

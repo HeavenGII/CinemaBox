@@ -28,7 +28,6 @@ function validateRating(rating) {
     const parsed = parseFloat(rating);
     if (isNaN(parsed)) return null;
 
-
     if (parsed < 0.0 || parsed > 10.0) {
         return null;
     }
@@ -36,6 +35,7 @@ function validateRating(rating) {
     return parseFloat(parsed.toFixed(1));
 }
 
+// Главная страница - Афиша
 router.get('/', async (req, res) => {
     const rawSearchTitle = req.query.searchTitle;
     const searchTitle = (rawSearchTitle && rawSearchTitle.trim().length > 0) ? rawSearchTitle.trim() : null;
@@ -45,8 +45,6 @@ router.get('/', async (req, res) => {
     const filterMinRating = validateRating(req.query.minRating);
 
     const isFilterApplied = !!(searchTitle || filterYear || filterGenre || filterMinRating);
-
-    const showOnlyActive = !isFilterApplied;
 
     let queryParams = [];
     let whereConditions = [];
@@ -90,46 +88,40 @@ router.get('/', async (req, res) => {
                 m.trailerurl,
                 m.agerestriction,
                 m.isactive,
+                m.onlineenabled,
                 ${firstScreeningIdSelect}
             FROM movies m
+            WHERE m.isactive = true
         `;
 
-        if (showOnlyActive) {
-            whereConditions.push(`m.isactive = true`);
-        }
-
         if (searchTitle) {
-            whereConditions.push(`m.title ILIKE $${paramCounter}`);
+            baseQuery += ` AND m.title ILIKE $${paramCounter}`;
             queryParams.push(`%${searchTitle}%`);
             paramCounter++;
         }
 
         if (filterYear) {
-            whereConditions.push(`m.releaseyear = $${paramCounter}`);
+            baseQuery += ` AND m.releaseyear = $${paramCounter}`;
             queryParams.push(filterYear);
             paramCounter++;
         }
 
         if (filterGenre) {
-            whereConditions.push(`m.genre ILIKE $${paramCounter}`);
+            baseQuery += ` AND m.genre ILIKE $${paramCounter}`;
             queryParams.push(`%${filterGenre}%`);
             paramCounter++;
         }
 
         if (filterMinRating) {
-            whereConditions.push(`m.ratingavg >= $${paramCounter}`);
+            baseQuery += ` AND m.ratingavg >= $${paramCounter}`;
             queryParams.push(filterMinRating);
             paramCounter++;
-        }
-
-        if (whereConditions.length > 0) {
-            baseQuery += ' WHERE ' + whereConditions.join(' AND ');
         }
 
         if (isFilterApplied) {
             baseQuery += ` ORDER BY m.ratingavg DESC, m.releaseyear DESC`;
         } else {
-            baseQuery += ` ORDER BY m.ratingavg DESC, m.releaseyear DESC LIMIT 10`;
+            baseQuery += ` ORDER BY m.releaseyear DESC`;
         }
 
         const movieResult = await db.query(baseQuery, queryParams);
@@ -145,7 +137,8 @@ router.get('/', async (req, res) => {
             hasSessions: !!m.first_screening_id,
             firstScreeningId: m.first_screening_id,
             trailerurl: m.trailerurl,
-            isactive: m.isactive
+            isactive: m.isactive,
+            onlineenabled: m.onlineenabled
         }));
 
         if (currentMovies.length > 0) {
@@ -175,10 +168,10 @@ router.get('/', async (req, res) => {
             filterGenre,
             filterMinRating,
             isFilterApplied,
-            showOnlyActive,
-
+            showOnlyActive: true,
             currentYear: new Date().getFullYear(),
-            isHome: true
+            isHome: true,
+            isOnline: false
         });
 
     } catch (e) {
@@ -190,13 +183,121 @@ router.get('/', async (req, res) => {
             heroMovie: null,
             allGenres: [],
             error: 'Не удалось выполнить поиск или загрузить фильмы',
-            isHome: true
+            isHome: true,
+            isOnline: false
+        });
+    }
+});
+
+// Маршрут для онлайн-фильмов
+router.get('/online', async (req, res) => {
+    const rawSearchTitle = req.query.searchTitle;
+    const searchTitle = (rawSearchTitle && rawSearchTitle.trim().length > 0) ? rawSearchTitle.trim() : null;
+
+    const filterYear = validateYear(req.query.year);
+    const filterGenre = req.query.genre && req.query.genre.trim() !== '' ? req.query.genre.trim() : null;
+    const filterMinRating = validateRating(req.query.minRating);
+
+    const isFilterApplied = !!(searchTitle || filterYear || filterGenre || filterMinRating);
+
+    let queryParams = [];
+    let whereConditions = ['onlineenabled = true'];
+    let paramCounter = 1;
+
+    // Получаем список всех жанров для фильтра
+    let allGenres = [];
+    try {
+        const genresResult = await db.query(`
+            SELECT DISTINCT trim(unnest(string_to_array(genre, ','))) AS clean_genre 
+            FROM movies 
+            WHERE genre IS NOT NULL 
+            ORDER BY clean_genre ASC
+        `);
+        allGenres = genresResult.rows.map(r => r.clean_genre);
+    } catch (e) {
+        console.error('Ошибка при загрузке жанров:', e);
+    }
+
+    if (searchTitle) {
+        whereConditions.push(`title ILIKE $${paramCounter}`);
+        queryParams.push(`%${searchTitle}%`);
+        paramCounter++;
+    }
+
+    if (filterYear) {
+        whereConditions.push(`releaseyear = $${paramCounter}`);
+        queryParams.push(filterYear);
+        paramCounter++;
+    }
+
+    if (filterGenre) {
+        whereConditions.push(`genre ILIKE $${paramCounter}`);
+        queryParams.push(`%${filterGenre}%`);
+        paramCounter++;
+    }
+
+    if (filterMinRating) {
+        whereConditions.push(`ratingavg >= $${paramCounter}`);
+        queryParams.push(filterMinRating);
+        paramCounter++;
+    }
+
+    try {
+        const query = `
+            SELECT
+                m.movieid,
+                m.title,
+                m.posterurl,
+                m.genre,
+                m.durationmin,
+                m.ratingavg,
+                m.price,
+                m.isactive,
+                m.agerestriction,
+                m.onlineenabled,
+                m.qualities,
+                d.name AS directorname,
+                EXISTS (
+                    SELECT 1 FROM screenings s 
+                    WHERE s.movieid = m.movieid 
+                      AND s.starttime > NOW() 
+                      AND s.iscancelled = FALSE
+                ) AS hassessions
+            FROM movies m
+            JOIN directors d ON m.directorid = d.directorid
+            WHERE ${whereConditions.join(' AND ')}
+            ORDER BY m.releaseyear DESC
+        `;
+
+        const result = await db.query(query, queryParams);
+        const movies = result.rows;
+
+        res.render('movies/movie-catalog', {
+            title: isFilterApplied ? 'Результаты поиска' : 'Онлайн-фильмы',
+            movies: movies,
+            searchTitle,
+            filterYear,
+            filterGenre,
+            filterMinRating,
+            isFilterApplied,
+            isOnline: true,
+            isHome: false,
+            isSoon: false,
+            allGenres: allGenres, // ← передаем жанры для фильтра
+            currentYear: new Date().getFullYear()
+        });
+
+    } catch (e) {
+        console.error('Ошибка при загрузке онлайн-фильмов:', e);
+        res.status(500).render('error', {
+            title: 'Ошибка',
+            message: 'Не удалось загрузить онлайн-фильмы.'
         });
     }
 });
 
 router.get('/api/search', async (req, res) => {
-    const query = req.query.query ? req.query.query.trim() : '';
+    const query = req.query.q ? req.query.q.trim() : '';
 
     if (query.length < 2) {
         return res.status(200).json([]);
@@ -205,28 +306,59 @@ router.get('/api/search', async (req, res) => {
     const queryParams = [`%${query}%`];
 
     try {
-        const movieQueryText = `
-            SELECT movieid AS id, title, posterurl, 'movie' AS type, ratingavg
+        // Поиск фильмов
+        const movieQuery = `
+            SELECT 
+                movieid AS id, 
+                title, 
+                posterurl, 
+                'movie' AS type, 
+                ratingavg,
+                releaseyear
             FROM movies
             WHERE title ILIKE $1
-            ORDER BY ratingavg DESC
+            ORDER BY 
+                CASE 
+                    WHEN isactive THEN 1
+                    WHEN onlineenabled THEN 2
+                    ELSE 3
+                END,
+                ratingavg DESC
             LIMIT 5
         `;
-        const movieResult = await db.query(movieQueryText, queryParams);
+        const movieResult = await db.query(movieQuery, queryParams);
 
-        const directorQueryText = `
-            SELECT directorid AS id, name AS title, NULL AS posterurl, 'director' AS type, NULL AS ratingavg
+        // Поиск режиссеров
+        const directorQuery = `
+            SELECT 
+                directorid AS id, 
+                name AS title, 
+                photourl AS posterurl, 
+                'director' AS type
             FROM directors
             WHERE name ILIKE $1
             ORDER BY name
             LIMIT 5
         `;
-        const directorResult = await db.query(directorQueryText, queryParams);
+        const directorResult = await db.query(directorQuery, queryParams);
 
+        // Объединяем результаты
         const combinedResults = [
-            ...movieResult.rows.map(row => ({ id: row.id, title: row.title, poster: row.posterurl, type: 'movie' })),
-            ...directorResult.rows.map(row => ({ id: row.id, title: row.title, poster: null, type: 'director' }))
-        ].slice(0, 5);
+            ...movieResult.rows.map(row => ({
+                id: row.id,
+                title: row.title,
+                poster: row.posterurl,
+                type: row.type,
+                year: row.releaseyear,
+                rating: row.ratingavg
+            })),
+            ...directorResult.rows.map(row => ({
+                id: row.id,
+                title: row.title,
+                poster: row.posterurl,
+                type: row.type
+            }))
+        ].slice(0, 8); // Ограничиваем до 8 результатов
 
         res.status(200).json(combinedResults);
 
@@ -234,6 +366,137 @@ router.get('/api/search', async (req, res) => {
         console.error('Ошибка при выполнении AJAX поиска:', e);
         res.status(500).json({ error: 'Произошла ошибка сервера при поиске' });
     }
+});
+
+router.get('/search', async (req, res) => {
+    const searchQuery = req.query.q ? req.query.q.trim() : '';
+    const filterYear = validateYear(req.query.year);
+    const filterGenre = req.query.genre && req.query.genre.trim() !== '' ? req.query.genre.trim() : null;
+    const filterMinRating = validateRating(req.query.minRating);
+
+    const isFilterApplied = !!(searchQuery || filterYear || filterGenre || filterMinRating);
+
+    let movieQueryParams = [];
+    let movieWhereConditions = [];
+    let paramCounter = 1;
+
+    // Получаем список всех жанров для фильтра
+    let allGenres = [];
+    try {
+        const genresResult = await db.query(`
+            SELECT DISTINCT trim(unnest(string_to_array(genre, ','))) AS clean_genre 
+            FROM movies 
+            WHERE genre IS NOT NULL 
+            ORDER BY clean_genre ASC
+        `);
+        allGenres = genresResult.rows.map(r => r.clean_genre);
+    } catch (e) {
+        console.error('Ошибка при загрузке жанров:', e);
+    }
+
+    // ПОИСК ФИЛЬМОВ
+    let movieQuery = `
+        SELECT
+            m.movieid,
+            m.title,
+            m.posterurl,
+            m.genre,
+            m.durationmin,
+            m.ratingavg,
+            m.price,
+            m.isactive,
+            m.agerestriction,
+            m.onlineenabled,
+            m.qualities,
+            d.name AS directorname,
+            EXISTS (
+                SELECT 1 FROM screenings s 
+                WHERE s.movieid = m.movieid 
+                  AND s.starttime > NOW() 
+                  AND s.iscancelled = FALSE
+            ) AS hassessions
+        FROM movies m
+        JOIN directors d ON m.directorid = d.directorid
+        WHERE 1=1
+    `;
+
+    if (searchQuery) {
+        movieQuery += ` AND m.title ILIKE $${paramCounter}`;
+        movieQueryParams.push(`%${searchQuery}%`);
+        paramCounter++;
+    }
+
+    if (filterYear) {
+        movieQuery += ` AND m.releaseyear = $${paramCounter}`;
+        movieQueryParams.push(filterYear);
+        paramCounter++;
+    }
+
+    if (filterGenre) {
+        movieQuery += ` AND m.genre ILIKE $${paramCounter}`;
+        movieQueryParams.push(`%${filterGenre}%`);
+        paramCounter++;
+    }
+
+    if (filterMinRating) {
+        movieQuery += ` AND m.ratingavg >= $${paramCounter}`;
+        movieQueryParams.push(filterMinRating);
+        paramCounter++;
+    }
+
+    movieQuery += ` ORDER BY m.releaseyear DESC`;
+
+    // ПОИСК РЕЖИССЕРОВ
+    let directors = [];
+    if (searchQuery) {
+        try {
+            const directorQuery = `
+                SELECT
+                    directorid,
+                    name,
+                    photourl,
+                    biography
+                FROM directors
+                WHERE name ILIKE $1
+                ORDER BY name
+                LIMIT 10
+            `;
+            const directorResult = await db.query(directorQuery, [`%${searchQuery}%`]);
+            directors = directorResult.rows;
+        } catch (e) {
+            console.error('Ошибка при поиске режиссеров:', e);
+        }
+    }
+
+    // ВЫПОЛНЯЕМ ПОИСК ФИЛЬМОВ
+    let movies = [];
+    try {
+        const movieResult = await db.query(movieQuery, movieQueryParams);
+        movies = movieResult.rows;
+    } catch (e) {
+        console.error('Ошибка при поиске фильмов:', e);
+    }
+
+    // Считаем количество в каждой категории
+    const activeCount = movies.filter(m => m.isactive).length;
+    const onlineCount = movies.filter(m => m.onlineenabled).length;
+    const upcomingCount = movies.filter(m => !m.isactive && !m.onlineenabled).length;
+
+    res.render('search/results', {
+        title: isFilterApplied ? 'Результаты поиска' : 'Поиск фильмов',
+        searchQuery: searchQuery,
+        filterYear: filterYear,
+        filterGenre: filterGenre,
+        filterMinRating: filterMinRating,
+        isFilterApplied: isFilterApplied,
+        movies: movies,
+        directors: directors,
+        allGenres: allGenres,
+        currentYear: new Date().getFullYear(),
+        activeCount: activeCount,
+        onlineCount: onlineCount,
+        upcomingCount: upcomingCount
+    });
 });
 
 router.get('/contacts', (req, res) => {
@@ -302,7 +565,6 @@ router.get('/shorts', async (req, res) => {
         res.status(500).render('error', { message: 'Ошибка сервера при загрузке видео.' });
     }
 });
-
 
 router.get('/rules', (req, res) => {
     res.render('rules', {

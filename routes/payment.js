@@ -44,13 +44,14 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
     console.log(`[Update Reservation] Ticket IDs:`, JSON.stringify(ticketIds));
 
     const client = await pool.connect();
+    const EXCHANGE_RATE = 28.00; // Курс BYN -> RUB
 
     try {
         await client.query('BEGIN');
 
         const screeningId = parseInt(ticketIds[0].screeningId, 10);
 
-        // Получаем базовую цену фильма
+        // Получаем базовую цену фильма в BYN
         const priceQuery = `
             SELECT m.price 
             FROM screenings s
@@ -58,8 +59,8 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
             WHERE s.screeningid = $1
         `;
         const priceResult = await client.query(priceQuery, [screeningId]);
-        const basePrice = priceResult.rows[0]?.price || 0;
-        console.log(`[Update Reservation] Базовая цена: ${basePrice} BYN`);
+        const basePriceBYN = priceResult.rows[0]?.price || 0;
+        console.log(`[Update Reservation] Базовая цена: ${basePriceBYN} BYN`);
 
         // Проверяем, не существует ли уже запись о платеже
         const existingPaymentCheck = await client.query(`
@@ -85,7 +86,7 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
                 if (ticketCheck.rows.length > 0 && ticketCheck.rows[0].status === 'Забронирован') {
                     console.log(`[Update Reservation] Билет ${ticket.seatKey} все еще в статусе "Забронирован", обновляю`);
 
-                    const finalPrice = (basePrice * MOCK_EXCHANGE_RATES['BYN']).toFixed(2);
+                    // Сохраняем в BYN (делим RUB на курс)
                     await client.query(`
                         UPDATE tickets 
                         SET status = 'Оплачен',
@@ -95,7 +96,7 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
                         AND userid = $3 
                         AND rownum = $4 
                         AND seatnum = $5
-                    `, [finalPrice, screeningId, userId, row, seat]);
+                    `, [basePriceBYN, screeningId, userId, row, seat]);
                 }
             }
 
@@ -110,7 +111,9 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
         let updatedCount = 0;
         for (const ticket of ticketIds) {
             const [row, seat] = ticket.seatKey.split('-').map(Number);
-            const finalPrice = (basePrice * MOCK_EXCHANGE_RATES['BYN']).toFixed(2);
+
+            // Сохраняем в BYN (делим RUB на курс)
+            const finalPriceBYN = basePriceBYN;
 
             // Находим и обновляем временное бронирование
             const updateResult = await client.query(`
@@ -124,7 +127,7 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
                 AND seatnum = $5 
                 AND status = 'Забронирован'
                 RETURNING ticketid, qrtoken
-            `, [finalPrice, screeningId, userId, row, seat]);
+            `, [finalPriceBYN, screeningId, userId, row, seat]);
 
             if (updateResult.rows.length > 0) {
                 const ticketId = updateResult.rows[0].ticketid;
@@ -135,6 +138,9 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
 
                 // Записываем метаданные платежа (только для первого билета)
                 if (updatedCount === 1) {
+                    // amount в payment_metadata храним в RUB (для истории платежа)
+                    const amountRUB = basePriceBYN * EXCHANGE_RATE;
+
                     await client.query(`
                         INSERT INTO payment_metadata (
                             payment_id,
@@ -152,7 +158,7 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
                         paymentData.paymentId,
                         `order_${Date.now()}_${ticketId}`,
                         userId,
-                        finalPrice,
+                        amountRUB.toFixed(2), // В RUB
                         'RUB',
                         'succeeded',
                         qrToken
@@ -180,6 +186,7 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
 // Старая функция для обратной совместимости
 async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymentId) {
     console.log(`[DB Action] Создание билетов (старый метод)`);
+    const EXCHANGE_RATE = 28.00; // Курс BYN -> RUB
 
     // Проверяем, не обработан ли уже этот платеж
     try {
@@ -240,7 +247,7 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
             return false;
         }
 
-        // Получаем цену фильма
+        // Получаем цену фильма в BYN
         const priceQuery = `
             SELECT m.price 
             FROM screenings s
@@ -248,13 +255,12 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
             WHERE s.screeningid = $1
         `;
         const priceResult = await client.query(priceQuery, [screeningId]);
-        const basePrice = priceResult.rows[0]?.price || 0;
-        const finalPrice = (basePrice * MOCK_EXCHANGE_RATES['BYN']).toFixed(2);
+        const basePriceBYN = priceResult.rows[0]?.price || 0;
 
-        // Создаем билеты
+        // Создаем билеты с ценой в BYN
         const rowsToInsert = insertData.map(d => d.rownum);
         const seatsToInsert = insertData.map(d => d.seatnum);
-        const pricesToInsert = insertData.map(() => finalPrice);
+        const pricesToInsert = insertData.map(() => basePriceBYN); // В BYN!
         const tokensToInsert = insertData.map(d => d.qrToken);
 
         const insertQuery = `
@@ -284,6 +290,9 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
             const ticketId = result.rows[i].ticketid;
             const qrToken = result.rows[i].qrtoken;
 
+            // amount в payment_metadata храним в RUB (конвертируем)
+            const amountRUB = basePriceBYN * EXCHANGE_RATE;
+
             await client.query(`
                 INSERT INTO payment_metadata (
                     payment_id,
@@ -301,7 +310,7 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
                 yookassaPaymentId,
                 `order_${Date.now()}_${ticketId}`,
                 userId,
-                finalPrice,
+                amountRUB.toFixed(2), // В RUB!
                 'RUB',
                 'succeeded',
                 qrToken
@@ -322,8 +331,8 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
 }
 
 async function checkAndFixTicketStatus(userId) {
-
     const client = await pool.connect();
+    const EXCHANGE_RATE = 28.00; // Курс BYN -> RUB
 
     try {
         await client.query('BEGIN');
@@ -336,7 +345,8 @@ async function checkAndFixTicketStatus(userId) {
                 t.status as ticket_status,
                 pm.payment_id,
                 pm.status as payment_status,
-                pm.amount as payment_amount
+                pm.amount as payment_amount,
+                pm.currency
             FROM tickets t
             JOIN payment_metadata pm ON t.qrtoken = pm.ticket_token
             WHERE t.userid = $1
@@ -351,21 +361,24 @@ async function checkAndFixTicketStatus(userId) {
             for (const ticket of problemTickets.rows) {
                 console.log(`[Status Fix] Исправляю билет ${ticket.ticketid}, платеж ${ticket.payment_id}`);
 
-                // Обновляем статус на "Оплачен"
+                // Конвертируем из RUB в BYN
+                const amountBYN = ticket.payment_amount / EXCHANGE_RATE;
+
+                // Обновляем статус на "Оплачен" с ценой в BYN
                 await client.query(`
                     UPDATE tickets 
                     SET status = 'Оплачен',
-                        totalprice = $1 / 28.00, -- конвертируем из RUB в BYN
+                        totalprice = $1,
                         reservationexpiresat = NULL
                     WHERE ticketid = $2
-                `, [ticket.payment_amount, ticket.ticketid]);
+                `, [amountBYN.toFixed(2), ticket.ticketid]);
             }
 
             await client.query('COMMIT');
             console.log(`[Status Fix] Успешно исправлено ${problemTickets.rows.length} билетов`);
             return { success: true, fixedCount: problemTickets.rows.length };
         } else {
-            await client.query('ROLLBACK');
+            await client.query('COMMIT'); // COMMIT вместо ROLLBACK
             console.log(`[Status Fix] Проблемных билетов не найдено`);
             return { success: true, fixedCount: 0 };
         }
@@ -663,13 +676,13 @@ router.get('/check-tickets', authMiddleware, async (req, res) => {
 });
 
 async function quickCheckPaymentStatus(paymentId, userId) {
-
     const client = await pool.connect();
+    const EXCHANGE_RATE = 28.00; // Курс BYN -> RUB
 
     try {
         // 1. Проверяем, есть ли уже успешная запись о платеже
         const paymentCheck = await client.query(`
-            SELECT status FROM payment_metadata 
+            SELECT status, amount, currency FROM payment_metadata 
             WHERE payment_id = $1 OR yookassa_payment_id = $1
         `, [paymentId]);
 
@@ -680,16 +693,21 @@ async function quickCheckPaymentStatus(paymentId, userId) {
             const ticketsResult = await client.query(`
                 UPDATE tickets 
                 SET status = 'Оплачен',
+                    totalprice = $1,
                     reservationexpiresat = NULL
-                WHERE userid = $1
+                WHERE userid = $2
                 AND status = 'Забронирован'
                 AND qrtoken IN (
                     SELECT ticket_token FROM payment_metadata 
-                    WHERE (payment_id = $2 OR yookassa_payment_id = $2)
+                    WHERE (payment_id = $3 OR yookassa_payment_id = $3)
                     AND status = 'succeeded'
                 )
                 RETURNING ticketid
-            `, [userId, paymentId]);
+            `, [
+                (paymentCheck.rows[0].amount / EXCHANGE_RATE).toFixed(2),
+                userId,
+                paymentId
+            ]);
 
             console.log(`[Quick Check] Обновлено ${ticketsResult.rows.length} билетов`);
             return { success: true, updated: ticketsResult.rows.length };

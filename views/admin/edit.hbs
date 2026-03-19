@@ -111,30 +111,29 @@
                             </a>
                         {{/if}}
                     </small>
+
+                    <div class="form-group">
+                        <label>Доступные качества видео:</label>
+                        <div class="qualities-checkbox-group">
+                            <label class="checkbox-inline">
+                                <input type="checkbox" name="qualities" value="1080p" {{#if (includes movieData.qualities "1080p")}}checked{{/if}}> 1080p
+                            </label>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" name="qualities" value="720p" {{#if (includes movieData.qualities "720p")}}checked{{/if}}> 720p
+                            </label>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" name="qualities" value="480p" {{#if (includes movieData.qualities "480p")}}checked{{/if}}> 480p
+                            </label>
+                            <label class="checkbox-inline">
+                                <input type="checkbox" name="qualities" value="360p" {{#if (includes movieData.qualities "360p")}}checked{{/if}}> 360p
+                            </label>
+                        </div>
+                        <small class="form-text">Выберите качества, доступные для этого фильма</small>
+                    </div>
                 </div>
             </div>
 
-            <!-- ДОБАВЛЕННЫЙ БЛОК: Доступные качества видео -->
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Доступные качества видео:</label>
-                    <div class="qualities-checkbox-group">
-                        <label class="checkbox-inline">
-                            <input type="checkbox" name="qualities" value="1080p" {{#if (includes movieData.qualities "1080p")}}checked{{/if}}> 1080p
-                        </label>
-                        <label class="checkbox-inline">
-                            <input type="checkbox" name="qualities" value="720p" {{#if (includes movieData.qualities "720p")}}checked{{/if}}> 720p
-                        </label>
-                        <label class="checkbox-inline">
-                            <input type="checkbox" name="qualities" value="480p" {{#if (includes movieData.qualities "480p")}}checked{{/if}}> 480p
-                        </label>
-                        <label class="checkbox-inline">
-                            <input type="checkbox" name="qualities" value="360p" {{#if (includes movieData.qualities "360p")}}checked{{/if}}> 360p
-                        </label>
-                    </div>
-                    <small class="form-text">Выберите качества, доступные для этого фильма</small>
-                </div>
-            </div>
+
 
             <div class="form-group description-full-width">
                 <label for="description">Описание / Сюжет</label>

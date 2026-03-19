@@ -519,14 +519,14 @@ router.post('/add', adminMiddleware,
 
             const insertQuery = `
                 INSERT INTO movies (title, originaltitle, description, durationmin,
-                    genre, posterurl, trailerurl, releaseyear, directorid, price, 
+                    genre, posterurl, trailerurl, releaseyear, directorid, price, isactive, 
                     agerestriction, onlineurl, onlineenabled, qualities)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING movieid;
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING movieid;
             `;
 
             await client.query(insertQuery, [
                 title, originaltitle, description, durationmin, genre, finalPosterUrl,
-                trailerUrl, releaseYear, directorId, price, agerestriction,
+                trailerUrl, releaseYear, directorId, price, isActive, agerestriction,
                 onlineUrl || null, onlineEnabled === 'on',
                 qualities || ['1080p', '720p', '480p', '360p']
             ]);

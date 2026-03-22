@@ -225,6 +225,8 @@
                 <div class="review-form-container">
                     {{#if currentUserReview}}
                         <h3>Ваш отзыв (Редактирование)</h3>
+
+                        {{!-- Форма для редактирования --}}
                         <form action="/movies/{{movie.movieid}}/review" method="POST" id="edit-review-form">
                             <div class="form-group rating-group">
                                 <label>Ваша оценка:</label>
@@ -249,15 +251,16 @@
 
                             <div class="review-edit-actions">
                                 <button type="submit" class="btn btn-primary btn-sm">Обновить отзыв</button>
-
-                                <form action="/movies/{{movie.movieid}}/review/delete" method="POST"
-                                      onsubmit="return confirm('Вы уверены, что хотите удалить свой отзыв и оценку? Это действие необратимо.');"
-                                      class="delete-user-review-form">
-                                    <button type="submit" class="btn btn-danger btn-sm">
-                                        <i class="fas fa-trash-alt"></i> Удалить отзыв
-                                    </button>
-                                </form>
                             </div>
+                        </form>
+
+                        {{!-- Форма для удаления - ОТДЕЛЬНО и ВНЕ формы редактирования --}}
+                        <form action="/movies/{{movie.movieid}}/review/delete" method="POST"
+                              onsubmit="return confirm('Вы уверены, что хотите удалить свой отзыв и оценку? Это действие необратимо.');"
+                              class="delete-user-review-form" style="margin-top: 10px;">
+                            <button type="submit" class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash-alt"></i> Удалить отзыв
+                            </button>
                         </form>
 
                     {{else}}
@@ -303,7 +306,6 @@
 
         <!-- Список отзывов (показываем всегда, если они есть) -->
         <div class="reviews-list">
-            <!-- 1. ОТЗЫВ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ (если есть) - выводится первым -->
             {{#if currentUserReview}}
                 <div class="review-item user-review-highlight">
                     <div class="review-header">
@@ -348,9 +350,6 @@
 </div>
 
 <style>
-    /* ===== УНИКАЛЬНЫЕ СТИЛИ ТОЛЬКО ДЛЯ ЭТОЙ СТРАНИЦЫ ===== */
-    /* Все базовые стили берутся из index.css */
-
     :root {
         --progress: 0%;
     }

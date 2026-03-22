@@ -858,8 +858,6 @@ router.post('/movies/:movieid/delete', adminMiddleware, async (req, res) => {
             deleteFile(posterUrl)
                 .catch(e => console.error('Не удалось удалить постер через сервис хранения:', e));
         }
-
-        req.flash('success', `Фильм успешно удален.`);
         res.redirect('/');
 
     } catch (e) {

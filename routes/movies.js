@@ -186,7 +186,7 @@ router.get('/:id', async (req, res) => {
 
         const trailerId = extractYouTubeId(movie.trailerurl);
         res.render('movies/details', {
-            title: `Билеты на ${movie.title}`,
+            title: `Фильм ${movie.title}`,
             movie: {
                 ...movie,
                 trailerId: trailerId

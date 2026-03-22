@@ -38,24 +38,24 @@
                     <p class="loading-text">Загрузка рейтингов...</p>
                 </div>
             </div>
-            <!-- КОНЕЦ БЛОКА РЕЙТИНГОВ -->
 
-            {{#if firstUpcomingScreening}}
-                <div class="screening-info-block">
-                    <p>
-                        <strong>Ближайший сеанс:</strong>
-                        {{formatDate firstUpcomingScreening.starttime}} (Зал: {{firstUpcomingScreening.hallname}})
-                    </p>
-                </div>
-                <div class="movie-actions">
-                    <a href="/movies/{{movie.movieid}}/select-time" class="btn btn-primary btn-lg">
-                        Купить билет</a>
-                </div>
-            {{else}}
-                <div class="alert alert-info movie-actions-placeholder">
-                    Нет доступных сеансов для онлайн-покупки билетов.
-                </div>
-            {{/if}}
+
+                {{#if isactive}}
+                    <div class="screening-info-block">
+                        <p>
+                            <strong>Ближайший сеанс:</strong>
+                            {{formatDate firstUpcomingScreening.starttime}} (Зал: {{firstUpcomingScreening.hallname}})
+                        </p>
+                    </div>
+                    <div class="movie-actions">
+                        <a href="/movies/{{movie.movieid}}/select-time" class="btn btn-primary btn-lg">
+                            Купить билет</a>
+                    </div>
+                {{else}}
+                    <div class="alert alert-info movie-actions-placeholder">
+                        Нет доступных сеансов для онлайн-покупки билетов.
+                    </div>
+                {{/if}}
         </div>
     </div>
 

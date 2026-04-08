@@ -176,8 +176,6 @@ const movieValidators = [
         .isInt({min: 1888, max: new Date().getFullYear()})
         .isLength({min: 4, max: 4}).toInt(),
 
-    body('price', 'Цена билета должна быть числом от 0 до 10000')
-        .isFloat({min: 0, max: 10000}).toFloat(),
 
     body('directorName', 'Имя режиссера должно быть от 2 до 100 символов')
         .isLength({min: 2, max: 100}).trim().escape()
@@ -292,7 +290,9 @@ const directorValidators = [
 const sessionValidators = [
     body('movieId', 'Необходимо выбрать фильм').isInt().toInt(),
     body('hallId', 'Необходимо выбрать зал').isInt().toInt(),
-    body('startTime', 'Некорректная дата и время').isISO8601()
+    body('startTime', 'Некорректная дата и время').isISO8601(),
+    body('price', 'Цена должна быть от 0 до 10000 BYN').isFloat({ min: 0, max: 10000 }).toFloat()
+
 ];
 
 const shortVideoValidators = [
@@ -1486,7 +1486,7 @@ router.post('/delete-director/:directorid', adminMiddleware, async (req, res) =>
 router.get('/sessions', adminMiddleware, async (req, res) => {
     try {
         const moviesQuery = `
-            SELECT movieid, title, price, durationmin
+            SELECT movieid, title, durationmin
             FROM movies 
             WHERE isactive = TRUE
             ORDER BY title;
@@ -1542,7 +1542,7 @@ router.post('/sessions', adminMiddleware,
     sessionValidators,
     async (req, res) => {
         const errors = validationResult(req);
-        const { movieId, hallId, startTime } = req.body;
+        const { movieId, hallId, startTime, price} = req.body;
 
         if (!errors.isEmpty()) {
             req.flash('error', errors.array()[0].msg);
@@ -1739,12 +1739,12 @@ router.post('/sessions', adminMiddleware,
             }
 
             const insertQuery = `
-                INSERT INTO screenings (movieid, hallid, starttime)
-                VALUES ($1, $2, $3)
+                INSERT INTO screenings (movieid, hallid, starttime, price)
+                VALUES ($1, $2, $3, $4)
                 RETURNING screeningid;
             `;
 
-            await pool.query(insertQuery, [movieId, hallId, startTime]);
+            await pool.query(insertQuery, [movieId, hallId, startTime, price]);
 
             req.flash('success', `Сеанс фильма "${movieTitle}" успешно создан на ${requestedStart.toLocaleString('ru-RU')}!`);
             req.session.save(() => res.redirect('/admin/sessions'));
@@ -2013,7 +2013,7 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
                 TO_CHAR(s.starttime, 'DD.MM.YYYY HH24:MI') AS "Дата_и_время_начала",
                 TO_CHAR(s.starttime + (m.durationmin || ' minutes')::INTERVAL, 'HH24:MI') AS "Время_окончания",
                 m.durationmin AS "Длительность_фильма",
-                m.price AS "Цена_билета",
+                s.price AS "Цена_билета",
                 CASE 
                     WHEN s.iscancelled THEN 'Отменен'
                     WHEN s.starttime < NOW() THEN 'Завершен'

@@ -434,8 +434,8 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
     try {
         const allScreeningsQuery = `
             SELECT
-                s.screeningid, s.starttime,
-                m.title AS movietitle, m.price AS baseprice,
+                s.screeningid, s.starttime, s.price,
+                m.title AS movietitle,
                 h.hallid, h.name AS hallname, h.rowscount, h.seatsperrow
             FROM screenings s
             JOIN movies m ON s.movieid = m.movieid
@@ -487,7 +487,7 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
                 startTime: formatDate(dateISO, 'HH:mm'),
                 fullDisplayTime: formatDate(dateISO, 'DD.MM. HH:mm'),
                 hall: scr.hallname,
-                basePrice: parseFloat(scr.baseprice)
+                basePrice: parseFloat(scr.price)
             });
 
             return acc;
@@ -501,7 +501,7 @@ router.get('/:movieId/select-time',authMiddleware, async (req, res) => {
             hall: firstScreening.hallname,
             rowsCount: firstScreening.rowscount,
             seatsPerRow: firstScreening.seatsperrow,
-            basePrice: parseFloat(firstScreening.baseprice),
+            basePrice: parseFloat(firstScreening.price),
             bookedSeatKeys: bookedSeatKeys,
             startTime: formatDate(firstScreening.starttime.toISOString(), 'DD.MM.YYYY HH:mm'),
         };
@@ -534,8 +534,8 @@ router.get('/api/seats/:sessionId', async (req, res) => {
     try {
         const screeningQuery = `
             SELECT
-                s.screeningid, s.starttime,
-                m.title AS movietitle, m.price AS baseprice,
+                s.screeningid, s.starttime, s.price,
+                m.title AS movietitle, 
                 h.name AS hallname, h.rowscount, h.seatsperrow
             FROM screenings s
             JOIN movies m ON s.movieid = m.movieid
@@ -568,7 +568,7 @@ router.get('/api/seats/:sessionId', async (req, res) => {
             hall: screening.hallname,
             rowsCount: screening.rowscount,
             seatsPerRow: screening.seatsperrow,
-            basePrice: parseFloat(screening.baseprice),
+            basePrice: parseFloat(screening.price),
             bookedSeatKeys: bookedSeatKeys,
 
             // Передаем полную дату для сводки, как и в initialSeatData

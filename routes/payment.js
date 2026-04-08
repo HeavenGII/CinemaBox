@@ -53,9 +53,8 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
 
         // Получаем базовую цену фильма в BYN
         const priceQuery = `
-            SELECT m.price 
+            SELECT s.price 
             FROM screenings s
-            JOIN movies m ON s.movieid = m.movieid
             WHERE s.screeningid = $1
         `;
         const priceResult = await client.query(priceQuery, [screeningId]);
@@ -249,9 +248,8 @@ async function createTicketRecords(ticketData, userId, paymentId, yookassaPaymen
 
         // Получаем цену фильма в BYN
         const priceQuery = `
-            SELECT m.price 
+            SELECT s.price  -- <-- теперь из screenings
             FROM screenings s
-            JOIN movies m ON s.movieid = m.movieid
             WHERE s.screeningid = $1
         `;
         const priceResult = await client.query(priceQuery, [screeningId]);

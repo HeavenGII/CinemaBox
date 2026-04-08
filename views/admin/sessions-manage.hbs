@@ -20,7 +20,7 @@
                         <option value="{{movieid}}"
                                 {{#ifeq movieid ../formData.movieId}}selected{{/ifeq}}
                         >
-                            {{title}} ({{price}} ₽)
+                            {{title}}
                         </option>
                     {{/each}}
                 </select>
@@ -49,6 +49,13 @@
                        min="{{formatDate (now) 'YYYY-MM-DDTHH:MM'}}"
                        required>
                 <small class="form-text-muted">Время должно быть в формате YYYY-MM-DDTHH:MM</small>
+            </div>
+
+            <div class="form-group">
+                <label for="price">Цена билета (BYN)</label>
+                <input type="number" id="price" name="price" step="0.01" min="0" required
+                       value="{{formData.price}}" placeholder="Например: 12.50">
+                <small class="form-text text-muted">Цена за одно место</small>
             </div>
 
             <button type="submit" class="btn btn-primary btn-lg">Создать сеанс</button>

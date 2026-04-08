@@ -24,11 +24,6 @@
                 <p><strong>Жанр:</strong> {{movie.genre}}</p>
                 <p><strong>Режиссер:</strong> <a href="/director/{{movie.directorid}}" class="director-link">{{movie.directorname}}</a></p>
                 <p><strong>Продолжительность:</strong> {{formatDuration movie.durationmin}}</p>
-                {{#if movie.isactive}}
-                    {{#if movie.price}}
-                        <p><strong>Базовая цена билета:</strong> <span class="price-text">{{movie.price}} BYN</span></p>
-                    {{/if}}
-                {{/if}}
             </div>
 
             <!-- НОВЫЙ БЛОК ДЛЯ СТОРОННИХ РЕЙТИНГОВ -->

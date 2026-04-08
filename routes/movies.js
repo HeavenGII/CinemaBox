@@ -27,7 +27,6 @@ router.get('/', async (req, res) => {
                 m.genre,
                 m.durationmin,
                 m.ratingavg,
-                m.price,
                 m.isactive,
                 m.agerestriction,
                 m.onlineenabled,
@@ -109,7 +108,7 @@ router.get('/:id', async (req, res) => {
         const movieResult = await pool.query(`
             SELECT
                 m.movieid, m.title, m.description, m.durationmin, m.genre,
-                m.posterurl, m.trailerurl, m.releaseyear, m.ratingavg, m.price,
+                m.posterurl, m.trailerurl, m.releaseyear, m.ratingavg,
                 m.isactive, m.agerestriction,
                 m.onlineurl, m.onlineenabled,
                 d.name AS directorname, d.directorid

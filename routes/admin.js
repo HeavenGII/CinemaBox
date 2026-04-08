@@ -2025,7 +2025,7 @@ router.get('/sessions/report',adminMiddleware, async (req, res) => {
             JOIN movies m ON s.movieid = m.movieid
             JOIN halls h ON s.hallid = h.hallid
             LEFT JOIN tickets t ON s.screeningid = t.screeningid AND t.status = 'Оплачен'
-            GROUP BY s.screeningid, m.title, h.name, s.starttime, m.durationmin, m.price, s.iscancelled
+            GROUP BY s.screeningid, m.title, h.name, s.starttime, m.durationmin, s.price, s.iscancelled
             ORDER BY s.starttime DESC;
         `;
 

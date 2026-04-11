@@ -48,7 +48,6 @@ CREATE TABLE movies (
     directorid      INT           REFERENCES directors(directorid) ON DELETE SET NULL,
     ratingavg       DECIMAL(3, 1) DEFAULT 0.0,
     isactive        BOOLEAN       NOT NULL DEFAULT TRUE,
-    price           DECIMAL(5, 2),
     agerestriction  INT           NOT NULL DEFAULT 0,
     onlineurl      VARCHAR(512),
     onlineenabled  BOOLEAN       DEFAULT FALSE,
@@ -70,8 +69,9 @@ CREATE TABLE screenings (
     screeningid   SERIAL        PRIMARY KEY,
     movieid       INT           NOT NULL REFERENCES movies(movieid) ON DELETE CASCADE,
     hallid        INT           NOT NULL REFERENCES halls(hallid) ON DELETE RESTRICT,
-    starttime     TIMESTAMP     NOT NULL, -- Дата и время начала сеанса
-    iscancelled   BOOLEAN       NOT NULL DEFAULT FALSE -- Отмена сеанса (Администратор)
+    starttime     TIMESTAMP     NOT NULL,
+    price DECIMAL(8, 2) NOT NULL DEFAULT 0,
+    iscancelled   BOOLEAN       NOT NULL DEFAULT FALSE
 );
 
 CREATE UNIQUE INDEX screenings_active_unique

@@ -16,7 +16,7 @@
         {{#if tickets.length}}
             <div class="tickets-list">
                 {{#each tickets}}
-                    <div class="ticket-card ticket-status-{{status}}">
+                    <div class="ticket-card ticket-status-{{status}} {{#unless isFuture}}ticket-past{{/unless}}">
                         <div class="ticket-details">
                             <h3>{{movie_title}}</h3>
                             <p><strong>Сеанс:</strong> {{sessionDate}}</p>

@@ -17,9 +17,9 @@
             <div class="tickets-list">
                 {{#each tickets}}
                     <div class="ticket-card ticket-status-{{status}}
-                        {{#if (eq status 'Оплачен')}}
+                        {{#ifeq status 'Оплачен'}}
                             {{#unless isFuture}}ticket-past{{/unless}}
-                        {{/if}}">
+                        {{/ifeq}}">
                         <div class="ticket-details">
                             <h3>{{movie_title}}</h3>
                             <p><strong>Сеанс:</strong> {{sessionDate}}</p>

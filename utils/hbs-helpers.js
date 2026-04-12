@@ -122,6 +122,10 @@ module.exports = {
         return array.includes(value);
     },
 
+    eq: function(a, b) {
+        return a == b;
+    },
+
     // Хелпер для обрезания длинного текста
     trimString: function(str, length) {
         if (!str) return '';

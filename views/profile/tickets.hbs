@@ -16,7 +16,7 @@
         {{#if tickets.length}}
             <div class="tickets-list">
                 {{#each tickets}}
-                    <div class="ticket-card ticket-status-{{status}} {{#unless isFuture}}ticket-past{{/unless}}">
+                    <div class="ticket-card ticket-status-{{status}} {{#if (and (eq status 'Оплачен') (not isFuture))}}ticket-past{{/if}}">
                         <div class="ticket-details">
                             <h3>{{movie_title}}</h3>
                             <p><strong>Сеанс:</strong> {{sessionDate}}</p>
@@ -45,12 +45,10 @@
                         </div>
 
                         <div class="ticket-actions vertical-actions">
-                            <!-- Кнопка деталей -->
                             <a href="/profile/ticket/{{ticketid}}" class="btn btn-primary view-btn">
                                 Посмотреть детали
                             </a>
 
-                            <!-- Кнопка отмены только для активных будущих билетов -->
                             {{#if isCancellable}}
                                 <form action="/profile/ticket/{{ticketid}}/cancel" method="POST">
                                     <button type="submit" class="btn btn-secondary cancel-btn"
@@ -59,7 +57,6 @@
                                     </button>
                                 </form>
                             {{else}}
-                                <!-- Сообщение о невозможности отмены -->
                                 <div class="action-info">
                                     {{#ifeq status 'Возвращен'}}
                                         <span class="info-text">Возврат выполнен</span>

@@ -1259,44 +1259,28 @@ body {
     color: var(--text-muted);
 }
 
-/* Стиль для завершенных сеансов */
 .ticket-past {
-    opacity: 0.7;
-    filter: grayscale(0.3);
+    opacity: 0.6;
+    filter: grayscale(0.2);
     background-color: var(--bg-primary);
     border-left-color: #6c757d !important;
-    transition: all 0.3s ease;
 }
 
 .ticket-past:hover {
-    opacity: 0.8;
+    opacity: 0.7;
     transform: none;
     box-shadow: none;
 }
 
-/* Затемняем текст в завершенных билетах */
 .ticket-past .ticket-details h3,
 .ticket-past .ticket-details p {
     color: var(--text-muted);
 }
 
-/* Меняем цвет статуса */
 .ticket-past .status-badge {
     background-color: #6c757d !important;
 }
 
-/* Делаем кнопку неактивной */
-.ticket-past .view-btn {
-    opacity: 0.6;
-    cursor: default;
-    pointer-events: none;
-    background-color: #6c757d !important;
-}
-
-.ticket-past .view-btn:hover {
-    transform: none;
-    box-shadow: none;
-}
 
 /* --- Рейтинги (звезды) --- */
 .star-rating-area {

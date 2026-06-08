@@ -744,6 +744,7 @@ body {
     text-transform: uppercase;
     text-decoration: none;
     border-radius: 4px;
+    width: 90%;
 }
 
 .btn-card:hover {

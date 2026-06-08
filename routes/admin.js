@@ -172,8 +172,8 @@ const movieValidators = [
     body('durationmin', 'Продолжительность должна быть числом от 1 до 360 минут')
         .isInt({min: 1, max: 360}).toInt(),
 
-    body('releaseYear', 'Год выпуска должен быть от 1888 до текущего года')
-        .isInt({min: 1888, max: new Date().getFullYear()})
+    body('releaseYear', 'Год выпуска должен быть от 1888 и до текущего года + 10 лет')
+        .isInt({min: 1888, max: new Date().getFullYear()+10})
         .isLength({min: 4, max: 4}).toInt(),
 
 

@@ -44,12 +44,25 @@
                 </div>
                 <div class="movie-actions">
                     <a href="/movies/{{movie.movieid}}/select-time" class="btn btn-primary btn-lg">
-                        Купить билет</a>
+                        Купить билет
+                    </a>
                 </div>
             {{else}}
-                <div class="alert alert-info movie-actions-placeholder">
-                    Нет доступных сеансов для онлайн-покупки билетов.
-                </div>
+                {{#if movie.isactive}}
+                    <div class="alert alert-info movie-actions-placeholder">
+                        Нет доступных сеансов для онлайн-покупки билетов.
+                    </div>
+                {{else if movie.onlineenabled}}
+                    <div class="movie-actions">
+                        <a href="/movies/{{movie.movieid}}?view=movie" class="btn btn-primary btn-lg">
+                            <i class="fas fa-play"></i> Смотреть онлайн
+                        </a>
+                    </div>
+                {{else}}
+                    <div class="alert alert-info movie-actions-placeholder">
+                        Фильм скоро в прокате. Следите за расписанием!
+                    </div>
+                {{/if}}
             {{/if}}
         </div>
     </div>

@@ -160,6 +160,7 @@ router.get('/:id', async (req, res) => {
         const allUpcomingScreenings = screeningsResult.rows;
 
         const firstUpcomingScreening = allUpcomingScreenings.length > 0 ? allUpcomingScreenings[0] : null;
+        const isOnlineOnly = movie.onlineenabled && !movie.isactive && allUpcomingScreenings.length === 0;
 
         const isAuthenticated = !!req.session.user;
         let currentUserReview = null;
@@ -200,7 +201,8 @@ router.get('/:id', async (req, res) => {
             canReview: canReview,
             error: req.flash('error')[0] || null,
             success: req.flash('success')[0] || null,
-            isMoviePage: true
+            isMoviePage: true,
+            isOnlineOnly: isOnlineOnly
         });
 
     } catch (e) {

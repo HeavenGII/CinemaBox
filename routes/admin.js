@@ -465,10 +465,10 @@ router.post('/add', adminMiddleware,
 
         let {
             title, originaltitle, description, durationmin, genre, trailerUrl,
-            releaseYear, directorName, isActive, agerestriction,
+            releaseYear, directorName, agerestriction,
             onlineEnabled, onlineUrl, qualities
         } = req.body;
-
+        let isActive = req.body.isActive === 'on';
         if (genre) {
             genre = genre
                 .split(',')

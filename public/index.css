@@ -1259,6 +1259,7 @@ body {
     color: var(--text-muted);
 }
 
+/* Стиль для завершенных сеансов */
 .ticket-past {
     opacity: 0.6;
     filter: grayscale(0.2);
@@ -1266,10 +1267,12 @@ body {
     border-left-color: #6c757d !important;
 }
 
-.ticket-past:hover {
-    opacity: 0.7;
-    transform: none;
-    box-shadow: none;
+/* Делаем кнопку неактивной */
+.ticket-past .view-btn {
+    opacity: 0.6;
+    cursor: default;
+    pointer-events: none;
+    background-color: #6c757d !important;
 }
 
 .ticket-past .ticket-details h3,

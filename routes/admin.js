@@ -209,6 +209,16 @@ const movieValidators = [
     body('agerestriction')
         .exists({checkFalsy: true}).withMessage('Возрастное ограничение обязательно.')
         .isInt({min: 0, max: 18}).withMessage('Возрастное ограничение должно быть числом от 0 до 18.'),
+
+    body('isActiveOrOnline').custom((value, { req }) => {
+        const isActive = req.body.isActive === 'on';
+        const onlineEnabled = req.body.onlineEnabled === 'on';
+
+        if (!isActive && !onlineEnabled) {
+            throw new Error('Фильм должен быть либо в прокате (Активен), либо доступен для онлайн-просмотра. Выберите хотя бы один вариант.');
+        }
+        return true;
+    }),
 ];
 
 async function checkMovieDuplicate(movieData, excludeMovieId = null) {

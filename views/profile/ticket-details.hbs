@@ -1,60 +1,112 @@
+<div class="page-container profile-page">
+    <h1 class="page-title">{{title}}</h1>
+
+    <a href="/profile/tickets" class="back-link inline-block mb-4">&larr; Вернуться к билетам</a>
+
+    <div class="ticket-view-page">
+        <div class="ticket-header flex justify-between items-center">
+            <div>
+                <h2 class="text-3xl font-bold">{{ticket.movie_title}}</h2>
+                <p class="text-lg text-text-muted mt-1">{{formatDate ticket.starttime "DD MMMM, HH:mm"}} - {{ticket.hall_name}}</p>
+            </div>
+            <span class="status-badge status-{{ticket.status}}">{{ticket.status}}</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2">
+                <h3 class="text-xl font-semibold mb-3">Ваше место: Ряд {{ticket.rownum}}, Место {{ticket.seatnum}}</h3>
+
+                <div class="seating-map-container mt-4 p-4 border border-[#333] rounded-lg bg-card">
+                    <p class="text-center text-sm text-text-muted mb-3">Схема зала</p>
+
+                    <div class="screen-indicator-seats mx-auto">ЭКРАН</div>
+
+                    <div id="seating-map-view" class="seating-map mx-auto">
+                        <div class="text-center text-text-muted">Загрузка схемы...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-1 qr-code-section flex flex-col items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-semibold mb-3">QR-код для входа</h3>
+                    <img src="{{ticket.qrCodeUrl}}" alt="QR Code" class="mx-auto block">
+                </div>
+                <div class="mt-4 text-center">
+                    <p class="text-lg font-bold mt-2">Цена: {{ticket.totalprice}} BYN</p>
+                </div>
+            </div>
+        </div>
+
+        {{#ifeq ticket.status 'Оплачен'}}
+            <div class="cancel-button-container mt-5 text-center">
+                <form action="/profile/ticket/{{ticket.ticketid}}/cancel" method="POST" onsubmit="return confirm('Вы уверены, что хотите отменить этот билет?');">
+                    <button type="submit" class="btn cancel-btn">
+                        Отменить билет
+                    </button>
+                </form>
+            </div>
+        {{/ifeq}}
+    </div>
+</div>
+
 <style>
-    /* Светлая тема для страницы деталей билета */
+    /* Специфичные стили для страницы деталей билета (с использованием глобальных переменных) */
     .ticket-view-page {
         max-width: 900px;
         margin: 0 auto;
         padding: 2rem;
-        background-color: #ffffff;
+        background-color: var(--bg-card);
         border-radius: 15px;
-        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.08);
-        color: #333;
+        box-shadow: 0 5px 25px var(--shadow-color);
+        color: var(--text-primary);
     }
 
     .ticket-header {
-        border-bottom: 2px dashed #dee2e6;
+        border-bottom: 2px dashed var(--border-color);
         padding-bottom: 1rem;
         margin-bottom: 1.5rem;
     }
 
     .ticket-info p strong {
-        color: #D12229;
+        color: var(--accent-primary);
     }
 
     .qr-code-section {
-        border: 1px solid #e0e0e0;
+        border: 1px solid var(--border-color);
         padding: 1rem;
         border-radius: 10px;
         text-align: center;
-        background-color: #f8f9fa;
+        background-color: var(--bg-primary);
     }
 
     .back-link {
-        color: #D12229;
+        color: var(--accent-primary);
         transition: color 0.2s;
         font-weight: 500;
         text-decoration: none;
     }
 
     .back-link:hover {
-        color: #FF4D50;
+        color: var(--accent-hover);
     }
 
-    /* Индикатор экрана для светлой темы */
-    .screen-indicator {
+    .screen-indicator-seats {
         width: 100%;
-        height: 15px;
-        background: linear-gradient(to right, #D12229, #8c171b);
+        height: 30px;
+        background: linear-gradient(to right, var(--accent-primary), var(--accent-hover));
         color: white;
         text-align: center;
-        line-height: 10px;
+        line-height: 30px;
         font-size: 1rem;
-        border-radius: 5px 5px 0 0;
+        font-weight: bold;
+        border-radius: 8px 8px 0 0;
         margin-bottom: 2rem;
-        box-shadow: 0 5px 15px rgba(209, 34, 41, 0.2);
+        box-shadow: 0 4px 12px rgba(229, 9, 20, 0.3);
         letter-spacing: 0.2em;
+        text-transform: uppercase;
     }
 
-    /* Стили схемы зала для светлой темы */
     .seat-view-row {
         display: flex;
         gap: 4px;
@@ -75,41 +127,39 @@
     }
 
     .seat-view.booked {
-        background-color: #e9ecef;
-        color: #adb5bd;
-        border: 1px solid #ced4da;
+        background-color: var(--border-color);
+        color: var(--text-muted);
     }
 
     .seat-view.available {
-        background-color: #f8f9fa;
-        color: #adb5bd;
-        border: 1px solid #dee2e6;
+        background-color: var(--bg-input);
+        color: var(--text-muted);
     }
 
     .seat-view.user-seat {
-        background-color: #D12229;
+        background-color: var(--accent-primary);
         color: white;
-        border: 2px solid #FF4D50;
+        border: 2px solid var(--accent-hover);
         transform: scale(1.2);
-        box-shadow: 0 0 5px rgba(209, 34, 41, 0.4);
+        box-shadow: 0 0 5px rgba(209, 34, 41, 0.8);
     }
 
     .row-view-label {
         width: 20px;
         text-align: right;
-        color: #6c757d;
+        color: var(--text-muted);
         font-size: 0.7rem;
     }
 
-    /* Кнопка отмены для светлой темы */
     .cancel-btn {
-        background-color: #dc3545 !important;
+        background-color: var(--error-color) !important;
         color: white !important;
-        border-color: #dc3545 !important;
         padding: 10px 20px;
         border-radius: 8px;
         font-weight: bold;
         transition: all 0.2s;
+        border: none;
+        cursor: pointer;
     }
 
     .cancel-btn:hover {
@@ -128,100 +178,47 @@
     }
 
     .status-Оплачен, .status-Забронирован {
-        background-color: #28a745;
+        background-color: var(--success-color);
     }
 
     .status-Возвращен {
-        background-color: #dc3545;
+        background-color: var(--error-color);
     }
 
-    /* Контейнер для схемы мест в светлой теме */
+    .bg-card {
+        background-color: var(--bg-card);
+    }
+
+    .text-text-muted {
+        color: var(--text-muted);
+    }
+
     .seating-map-container {
-        background: #ffffff !important;
-        border: 1px solid #e0e0e0 !important;
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px;
     }
 
-    /* ДОБАВЛЕННЫЙ СТИЛЬ: Контейнер для кнопки отмены с отступом 20px */
     .cancel-button-container {
         margin-top: 20px;
         text-align: center;
     }
 </style>
 
-<div class="page-container profile-page">
-    <h1 class="page-title">{{title}}</h1>
-
-    <a href="/profile/tickets" class="back-link inline-block mb-4">&larr; Вернуться к билетам</a>
-
-    <div class="ticket-view-page">
-        <div class="ticket-header flex justify-between items-center">
-            <div>
-                <h2 class="text-3xl font-bold">{{ticket.movie_title}}</h2>
-                <p class="text-lg text-text-muted mt-1">{{formatDate ticket.starttime "DD MMMM, HH:mm"}} - {{ticket.hall_name}}</p>
-            </div>
-            <span class="status-badge status-{{ticket.status}}">{{ticket.status}}</span>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="md:col-span-2">
-                <h3 class="text-xl font-semibold mb-3">Ваше место: Ряд {{ticket.rownum}}, Место {{ticket.seatnum}}</h3>
-
-                <div class="seating-map-container mt-4 p-4 border border-[#333] rounded-lg bg-[#1E1E1E]">
-                    <p class="text-center text-sm text-text-muted mb-3">Схема зала</p>
-
-                    {{!-- ДОБАВЛЕН ИНДИКАТОР ЭКРАНА --}}
-                    <div class="screen-indicator mx-auto">ЭКРАН</div>
-
-                    <div id="seating-map-view" class="seating-map mx-auto">
-                        <div class="text-center text-text-muted">Загрузка схемы...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="md:col-span-1 qr-code-section flex flex-col items-center justify-between">
-                <div>
-                    <h3 class="text-xl font-semibold mb-3">QR-код для входа</h3>
-                    <img src="{{ticket.qrCodeUrl}}" alt="QR Code" class="mx-auto block">
-                </div>
-                <div class="mt-4 text-center">
-                    <p class="text-lg font-bold mt-2">Цена: {{ticket.totalprice}} BYN</p>
-                </div>
-            </div>
-        </div>
-
-        {{#ifeq ticket.status 'Оплачен'}}
-        {{!-- ИСПОЛЬЗУЕМ КЛАСС ДЛЯ ОТСТУПА 20PX --}}
-            <div class="cancel-button-container">
-                <form action="/profile/ticket/{{ticket.ticketid}}/cancel" method="POST" onsubmit="return confirm('Вы уверены, что хотите отменить этот билет? {{ticket.ticketid}}');">
-                    <button type="submit" class="btn cancel-btn">
-                        Отменить билет
-                    </button>
-                </form>
-            </div>
-        {{/ifeq}}
-
-    </div>
-</div>
-
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const seatingMap = document.getElementById('seating-map-view');
 
-        // Данные переданы из Node.js
         const rowsCount = {{ticket.rowscount}};
         const seatsPerRow = {{ticket.seatsperrow}};
-        // userSeatKey должен быть в формате 'ряд-место', например, '5-12'
         const userSeatKey = '{{ticket.rownum}}-{{ticket.seatnum}}';
 
         let bookedSeats = new Set();
         try {
-            // Используем JSON.parse для получения массива занятых мест
             const bookedSeatsJson = '{{{bookedSeatKeysJson}}}';
             if (bookedSeatsJson && bookedSeatsJson !== 'undefined') {
                 const parsedSeats = JSON.parse(bookedSeatsJson);
                 if (Array.isArray(parsedSeats)) {
-                    // Фильтруем, чтобы не добавлять само место пользователя в booked,
-                    // даже если оно пришло в списке (например, если API не исключает его)
                     parsedSeats.forEach(key => {
                         if (key !== userSeatKey) {
                             bookedSeats.add(key);
@@ -260,8 +257,6 @@
                     } else if (bookedSeats.has(seatKey)) {
                         seatDiv.classList.add('booked');
                     } else {
-                        // Для деталей билета нам не нужно показывать "available" как кликабельное,
-                        // поэтому можно использовать тот же стиль, что и для booked, но без класса user-seat.
                         seatDiv.classList.add('booked');
                     }
 

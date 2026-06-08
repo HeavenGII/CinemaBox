@@ -131,25 +131,3 @@
         </form>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const addMovieForm = document.querySelector('.add-movie-form');
-
-        if (addMovieForm) {
-            addMovieForm.addEventListener('submit', function(e) {
-                const isActiveCheckbox = document.getElementById('isActive');
-                const onlineEnabledCheckbox = document.getElementById('onlineEnabled');
-
-                const isActive = isActiveCheckbox ? isActiveCheckbox.checked : false;
-                const onlineEnabled = onlineEnabledCheckbox ? onlineEnabledCheckbox.checked : false;
-
-                if (!isActive && !onlineEnabled) {
-                    e.preventDefault();
-                    alert('Фильм должен быть либо в прокате (Активен в прокате), либо доступен для онлайн-просмотра, либо и то, и другое.');
-                    return false;
-                }
-            });
-        }
-    });
-</script>

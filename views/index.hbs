@@ -17,9 +17,9 @@
         <p>Рейтинг: {{heroMovie.rating}} ⭐ | Продолжительность: {{formatDuration heroMovie.durationmin}}</p>
         <div class="hero-actions">
             {{#if heroMovie.hasSessions}}
-                <a href="/movies/{{heroMovie.movield}}/select-time" class="btn btn-primary">Купить билет</a>
+                <a href="/movies/{{heroMovie.movield}}/select-time" class="btn btn-primary" style="margin-right: 5px">Купить билет</a>
             {{else}}
-                <span class="btn btn-primary btn-disabled">Нет сеансов</span>
+                <span class="btn btn-primary btn-disabled" style="margin-right: 5px">Нет сеансов</span>
             {{/if}}
             <a href="/movies/{{heroMovie.movield}}" class="btn btn-secondary">Информация</a>
         </div>

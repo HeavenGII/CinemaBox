@@ -3,8 +3,8 @@ const keys = require('../keys');
 
 const transporter = nodemailer.createTransport({
     host: keys.SMTP_HOST,
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false,
     auth: {
         user: keys.SMTP_USER,
         pass: keys.SMTP_PASSWORD,
@@ -12,6 +12,9 @@ const transporter = nodemailer.createTransport({
     connectionTimeout: 30000,
     greetingTimeout: 30000,
     socketTimeout: 30000,
+    tls: {
+        rejectUnauthorized: false  // иногда нужно на Render
+    },
 });
 
 transporter.verify((error, success) => {

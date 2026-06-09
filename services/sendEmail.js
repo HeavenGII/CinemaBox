@@ -14,7 +14,6 @@ const transporter = nodemailer.createTransport({
     socketTimeout: 30000,
 });
 
-// Проверка подключения
 transporter.verify((error, success) => {
     if (error) {
         console.error('❌ Ошибка подключения к SMTP серверу:', error.message);

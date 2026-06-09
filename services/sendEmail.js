@@ -2,19 +2,16 @@ const nodemailer = require('nodemailer');
 const keys = require('../keys');
 
 const transporter = nodemailer.createTransport({
-    host: keys.SMTP_HOST || 'smtp.gmail.com',
-    port: 587,
-    secure: false,
+    host: keys.SMTP_HOST,
+    port: 465,
+    secure: true,  // ← true для порта 465
     auth: {
         user: keys.SMTP_USER,
         pass: keys.SMTP_PASSWORD,
     },
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
-    tls: {
-        rejectUnauthorized: false
-    }
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
 });
 
 // Проверка подключения

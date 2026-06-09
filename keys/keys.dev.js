@@ -6,5 +6,5 @@ module.exports = {
     SMTP_HOST: 'smtp.gmail.com',
     SMTP_PORT: 465,
     SMTP_USER: 'ilya.golovatskiy@gmail.com',
-    SMTP_PASSWORD: 'urrz ifax bqtn gnrr' 
+    SMTP_PASSWORD: 'zaap ndhg fmos tdgb'
 };

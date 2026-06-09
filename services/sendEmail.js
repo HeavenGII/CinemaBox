@@ -3,25 +3,11 @@ const keys = require('../keys');
 
 const transporter = nodemailer.createTransport({
     host: keys.SMTP_HOST,
-    port: 587,
-    secure: false,
+    port: keys.SMTP_PORT,
+    secure: keys.SMTP_PORT === 465,
     auth: {
         user: keys.SMTP_USER,
         pass: keys.SMTP_PASSWORD,
-    },
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 30000,
-    tls: {
-        rejectUnauthorized: false  // иногда нужно на Render
-    },
-});
-
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Ошибка подключения к SMTP серверу:', error.message);
-    } else {
-        console.log('✅ SMTP сервер готов к отправке писем');
     }
 });
 

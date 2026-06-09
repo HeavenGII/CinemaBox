@@ -1512,7 +1512,7 @@ router.get('/sessions', adminMiddleware, async (req, res) => {
             LEFT JOIN tickets t ON s.screeningid = t.screeningid AND t.status = 'Оплачен'
             WHERE s.starttime >= NOW() - INTERVAL '1 hour'
             GROUP BY s.screeningid, s.starttime, m.title, h.name, s.iscancelled, m.durationmin
-            ORDER BY s.starttime DESC;
+            ORDER BY s.starttime ASC;
         `;
 
         const { rows: upcomingScreenings } = await pool.query(upcomingScreeningsQuery);

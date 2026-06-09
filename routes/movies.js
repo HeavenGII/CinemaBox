@@ -31,13 +31,12 @@ router.get('/', async (req, res) => {
                 m.agerestriction,
                 m.onlineenabled,
                 d.name AS directorname,
-                -- НОВОЕ ПОЛЕ: Проверяем наличие будущих сеансов для фильма
                 EXISTS (
                     SELECT 1
-                    FROM screenings s -- Используем screenings, как в вашей схеме
+                    FROM screenings s
                     WHERE s.movieid = m.movieid 
                       AND s.starttime > NOW() 
-                      AND s.iscancelled = FALSE -- Исключаем отмененные сеансы
+                      AND s.iscancelled = FALSE
                 ) AS hassessions
             FROM movies m
             JOIN directors d ON m.directorid = d.directorid
@@ -48,31 +47,33 @@ router.get('/', async (req, res) => {
         let isHome = true;
         let isSoon = false;
 
-        // --- ЛОГИКА ФИЛЬТРАЦИИ ПО КАТЕГОРИИ ---
         if (category === 'soon') {
-            // Если выбрано "Скоро", показываем только неактивные фильмы
             whereClauses.push(`m.isactive = FALSE AND m.onlineenabled = FALSE`);
             title = 'Скоро в прокате';
             isHome = false;
             isSoon = true;
+        } else if (category === 'online') {
+            whereClauses.push(`m.onlineenabled = TRUE`);
+            title = 'Онлайн-фильмы';
+            isHome = false;
+            isSoon = false;
         } else {
-            // По умолчанию (Афиша) показываем только активные фильмы
             whereClauses.push(`m.isactive = TRUE`);
         }
 
-        // --- ЛОГИКА ПОИСКА ---
         if (searchTitle && searchTitle.trim()) {
             queryParams.push(`%${searchTitle.trim()}%`);
             whereClauses.push(`m.title ILIKE $${queryParams.length}`);
-            title = (isSoon ? 'Скоро: ' : 'Афиша: ') + `Результаты поиска "${searchTitle}"`;
+            title = (isSoon ? 'Скоро: ' : (category === 'online' ? 'Онлайн: ' : 'Афиша: ')) + `Результаты поиска "${searchTitle}"`;
         }
 
         if (whereClauses.length > 0) {
             query += ' WHERE ' + whereClauses.join(' AND ');
         }
 
-        // Сортировка: активные сверху, затем по году релиза
-        query += ' ORDER BY m.isactive DESC, m.releaseyear DESC;';
+        if (category === 'online') {
+            query += ` ORDER BY m.isactive DESC, m.releaseyear DESC`;
+        }
 
         const result = await pool.query(query, queryParams);
         const movies = result.rows;
@@ -572,7 +573,6 @@ router.get('/api/seats/:sessionId', async (req, res) => {
             basePrice: parseFloat(screening.price),
             bookedSeatKeys: bookedSeatKeys,
 
-            // Передаем полную дату для сводки, как и в initialSeatData
             startTime: formatDate(screening.starttime.toISOString(), 'DD.MM.YYYY HH:mm'),
         };
 

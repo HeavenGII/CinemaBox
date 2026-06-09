@@ -4,12 +4,11 @@ const keys = require('../keys');
 const transporter = nodemailer.createTransport({
     host: keys.SMTP_HOST,
     port: keys.SMTP_PORT,
-    secure: keys.SMTP_PORT === 465,
+    secure: keys.SMTP_PORT === 587,
     auth: {
         user: keys.SMTP_USER,
         pass: keys.SMTP_PASSWORD,
     },
-    // КРИТИЧЕСКИЕ НАСТРОЙКИ ДЛЯ RENDER:
     connectionTimeout: 30000,    // 30 секунд на соединение
     greetingTimeout: 30000,      // 30 секунд на приветствие
     socketTimeout: 30000,        // 30 секунд на обмен данными

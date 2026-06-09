@@ -4,7 +4,7 @@ const keys = require('../keys');
 const transporter = nodemailer.createTransport({
     host: keys.SMTP_HOST,
     port: keys.SMTP_PORT,
-    secure: keys.SMTP_PORT === 587,
+    secure: false,
     auth: {
         user: keys.SMTP_USER,
         pass: keys.SMTP_PASSWORD,

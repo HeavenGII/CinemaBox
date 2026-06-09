@@ -926,7 +926,6 @@ router.post('/users/delete', adminMiddleware,
     async (req, res) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            req.flash('error', errors.array()[0].msg);
             return res.redirect('/admin/users');
         }
 
@@ -1157,15 +1156,12 @@ router.post('/users/delete', adminMiddleware,
                     message += ` ${pastTickets.length} билетов на прошедшие сеансы аннулированы.`;
                 }
 
-                req.flash('success', message);
             } else {
-                req.flash('error', `Пользователь с ID: ${userIdToDelete} не найден.`);
             }
 
         } catch (e) {
             await client.query('ROLLBACK');
             console.error('❌ Ошибка при удалении пользователя:', e);
-            req.flash('error', 'Произошла ошибка базы данных при удалении пользователя.');
         } finally {
             client.release();
         }

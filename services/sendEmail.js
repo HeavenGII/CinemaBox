@@ -8,7 +8,19 @@ const transporter = nodemailer.createTransport({
     auth: {
         user: keys.SMTP_USER,
         pass: keys.SMTP_PASSWORD,
-    }
+    },
+    // КРИТИЧЕСКИЕ НАСТРОЙКИ ДЛЯ RENDER:
+    connectionTimeout: 30000,    // 30 секунд на соединение
+    greetingTimeout: 30000,      // 30 секунд на приветствие
+    socketTimeout: 30000,        // 30 секунд на обмен данными
+    tls: {
+        rejectUnauthorized: false,  // Иногда на Render сертификаты не проходят
+        ciphers: 'SSLv3'
+    },
+    pool: true,                  // Использовать пул соединений
+    maxConnections: 1,           // Не больше 1 соединения
+    maxMessages: 10,              // Пересоздавать соединение после 10 писем
+    rateLimit: 1                 // Не более 1 письма в секунду
 });
 
 // Функция для отправки уведомления о блокировке аккаунта

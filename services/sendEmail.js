@@ -2,12 +2,27 @@ const nodemailer = require('nodemailer');
 const keys = require('../keys');
 
 const transporter = nodemailer.createTransport({
-    host: keys.SMTP_HOST,
-    port: keys.SMTP_PORT,
+    host: keys.SMTP_HOST || 'smtp.gmail.com',
+    port: 587,
     secure: false,
     auth: {
         user: keys.SMTP_USER,
         pass: keys.SMTP_PASSWORD,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
+    tls: {
+        rejectUnauthorized: false
+    }
+});
+
+// Проверка подключения
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('❌ Ошибка подключения к SMTP серверу:', error.message);
+    } else {
+        console.log('✅ SMTP сервер готов к отправке писем');
     }
 });
 

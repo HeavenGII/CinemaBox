@@ -595,6 +595,8 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
     const cancellationDeadline = 120;
 
     try {
+        // ИСПРАВЛЕНИЕ: Ищем payment_metadata через qrtoken, но также пытаемся найти
+        // другие билеты из той же транзакции по yookassa_payment_id
         const checkQuery = `
             SELECT 
                 t.ticketid,
@@ -609,36 +611,37 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
                 pm.payment_id,
                 pm.yookassa_payment_id,
                 pm.amount,
-                pm.currency
+                pm.currency,
+                -- Находим ВСЕ билеты из этой транзакции
+                (
+                    SELECT json_agg(json_build_object(
+                        'ticketid', t2.ticketid,
+                        'status', t2.status,
+                        'amount', pm2.amount
+                    ))
+                    FROM tickets t2
+                    JOIN payment_metadata pm2 ON t2.qrtoken = pm2.ticket_token
+                    WHERE pm2.yookassa_payment_id = COALESCE(pm.yookassa_payment_id, (
+                        SELECT yookassa_payment_id FROM payment_metadata 
+                        WHERE ticket_token = t.qrtoken
+                    ))
+                ) AS sibling_tickets
             FROM tickets t
             JOIN screenings s ON t.screeningid = s.screeningid
             JOIN movies m ON s.movieid = m.movieid
             JOIN halls h ON s.hallid = h.hallid
-            JOIN payment_metadata pm ON t.qrtoken = pm.ticket_token
+            LEFT JOIN payment_metadata pm ON t.qrtoken = pm.ticket_token
             WHERE t.ticketid = $1 AND t.userid = $2
             AND t.status = 'Оплачен'
-            AND pm.yookassa_payment_id IS NOT NULL
-            AND pm.yookassa_payment_id != '';
         `;
-
-        console.log('🔍 Checking ticket for refund:', { ticketId, userId });
 
         const checkResult = await pool.query(checkQuery, [ticketId, userId]);
         const ticketInfo = checkResult.rows[0];
 
         if (!ticketInfo) {
-            console.log('❌ Ticket not found or no payment metadata');
-            req.flash('error', `Билет №${ticketId} не найден или информация о платеже отсутствует.`);
+            req.flash('error', `Билет №${ticketId} не найден или уже отменен.`);
             return req.session.save(() => res.redirect('/profile/tickets'));
         }
-
-        console.log('✅ Ticket found:', {
-            ticketId: ticketInfo.ticketid,
-            yookassaPaymentId: ticketInfo.yookassa_payment_id,
-            amount: ticketInfo.amount,
-            currency: ticketInfo.currency,
-            movie: ticketInfo.movie_title
-        });
 
         // Проверка срока отмены
         const startTime = new Date(ticketInfo.starttime);
@@ -649,36 +652,45 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
             return req.session.save(() => res.redirect('/profile/tickets'));
         }
 
-        // Начинаем транзакцию
         const client = await pool.connect();
 
         try {
             await client.query('BEGIN');
 
-            // 1. Обновляем статус билета
-            const cancelQuery = `
+            // Парсим sibling_tickets
+            let siblingTickets = [];
+            try {
+                siblingTickets = JSON.parse(ticketInfo.sibling_tickets) || [];
+            } catch(e) {
+                siblingTickets = [];
+            }
+
+            // Находим все оплаченные билеты в этой транзакции
+            const allPaidTickets = siblingTickets.filter(t => t.status === 'Оплачен');
+            const isLastTicket = allPaidTickets.length <= 1;
+
+            // Рассчитываем сумму возврата
+            let refundAmount;
+            if (isLastTicket) {
+                // Если это последний билет, возвращаем всю сумму
+                refundAmount = parseFloat(ticketInfo.amount);
+            } else {
+                // Если есть другие билеты, сумма за этот билет = общая сумма / кол-во билетов
+                const totalAmount = allPaidTickets.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+                refundAmount = totalAmount / allPaidTickets.length;
+            }
+
+            // Обновляем статус билета
+            await client.query(`
                 UPDATE tickets
                 SET status = 'Возвращен',
                     refundedat = CURRENT_TIMESTAMP
                 WHERE ticketid = $1 AND userid = $2 AND status = 'Оплачен'
-                RETURNING ticketid;
-            `;
-
-            const result = await client.query(cancelQuery, [ticketId, userId]);
-
-            if (result.rowCount === 0) {
-                throw new Error('Не удалось обновить статус билета');
-            }
-
-            console.log('✅ Ticket status updated to "Возвращен"');
+            `, [ticketId, userId]);
 
             const simulatedRefundId = `rf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            const amountInRub = parseFloat(ticketInfo.amount);
 
-            console.log('🔄 Creating refund record in database (simulated):', simulatedRefundId);
-            console.log('💰 Refund amount (RUB):', amountInRub);
-
-            const refundQuery = `
+            await client.query(`
                 INSERT INTO refunds (
                     ticket_id,
                     payment_id,
@@ -689,31 +701,24 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
                     reason,
                     yookassa_payment_id,
                     is_simulated
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
-                RETURNING id;
-            `;
-
-            await client.query(refundQuery, [
+                ) VALUES ($1, $2, $3, $4, $5, 'succeeded', $6, $7, true)
+            `, [
                 ticketId,
-                ticketInfo.payment_id,
+                ticketInfo.payment_id || `payment_${ticketInfo.yookassa_payment_id}`,
                 simulatedRefundId,
-                amountInRub,
+                refundAmount.toFixed(2),
                 ticketInfo.currency || 'RUB',
-                'succeeded', // Симулируем успешный статус
-                'Возврат по инициативе пользователя',
+                isLastTicket ? 'Полный возврат средств' : 'Частичный возврат при отмене одного билета из нескольких',
                 ticketInfo.yookassa_payment_id
             ]);
 
-            console.log('✅ Refund info saved to database (simulated)');
-
             await client.query('COMMIT');
 
-            req.flash('success',
-                `Билет №${ticketId} успешно отменен. ` +
-                `Возврат средств в размере ${ticketInfo.totalprice} BYN инициирован. ` +
-                `Средства поступят на вашу карту в течение 1-10 рабочих дней. ` +
-                `(ID возврата: ${simulatedRefundId})`
-            );
+            const message = isLastTicket
+                ? `Билет №${ticketId} успешно отменен. Возврат ${refundAmount.toFixed(2)} ${ticketInfo.currency} инициирован.`
+                : `Билет №${ticketId} успешно отменен. Возврат ${refundAmount.toFixed(2)} ${ticketInfo.currency} будет обработан. Остальные ${allPaidTickets.length - 1} билет(ов) остаются действительными.`;
+
+            req.flash('success', message);
 
         } catch (error) {
             await client.query('ROLLBACK');

@@ -73,29 +73,51 @@ async function updateTempReservationToPaid(ticketIds, userId, paymentData) {
             for (const ticket of ticketIds) {
                 const [row, seat] = ticket.seatKey.split('-').map(Number);
 
-                // Проверяем статус этого билета
-                const ticketCheck = await client.query(`
-                    SELECT status FROM tickets 
-                    WHERE screeningid = $1 
-                    AND userid = $2 
-                    AND rownum = $3 
-                    AND seatnum = $4
-                `, [screeningId, userId, row, seat]);
+                const updateResult = await client.query(`
+        UPDATE tickets 
+        SET status = 'Оплачен',
+            totalprice = $1,
+            reservationexpiresat = NULL
+        WHERE screeningid = $2 
+        AND userid = $3 
+        AND rownum = $4 
+        AND seatnum = $5 
+        AND status = 'Забронирован'
+        RETURNING ticketid, qrtoken
+    `, [basePriceBYN, screeningId, userId, row, seat]);
 
-                if (ticketCheck.rows.length > 0 && ticketCheck.rows[0].status === 'Забронирован') {
-                    console.log(`[Update Reservation] Билет ${ticket.seatKey} все еще в статусе "Забронирован", обновляю`);
+                if (updateResult.rows.length > 0) {
+                    const ticketId = updateResult.rows[0].ticketid;
+                    const qrToken = updateResult.rows[0].qrtoken;
 
-                    // Сохраняем в BYN (делим RUB на курс)
+                    // amount в payment_metadata храним в RUB
+                    const amountRUB = basePriceBYN * EXCHANGE_RATE;
+
+                    // ВАЖНО: Для каждого билета своя запись в payment_metadata
                     await client.query(`
-                        UPDATE tickets 
-                        SET status = 'Оплачен',
-                            totalprice = $1,
-                            reservationexpiresat = NULL
-                        WHERE screeningid = $2 
-                        AND userid = $3 
-                        AND rownum = $4 
-                        AND seatnum = $5
-                    `, [basePriceBYN, screeningId, userId, row, seat]);
+            INSERT INTO payment_metadata (
+                payment_id,
+                yookassa_payment_id,
+                order_id,
+                user_id,
+                amount,
+                currency,
+                status,
+                ticket_token
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (payment_id) DO NOTHING
+        `, [
+                        paymentData.orderId,
+                        paymentData.paymentId,
+                        `order_${Date.now()}_${ticketId}`,
+                        userId,
+                        (amountRUB / ticketIds.length).toFixed(2), // Делим сумму на количество билетов!
+                        'RUB',
+                        'succeeded',
+                        qrToken
+                    ]);
+
+                    console.log(`[Update Reservation] Обновлен билет ${ticketId} для места ${ticket.seatKey} с суммой ${(amountRUB / ticketIds.length).toFixed(2)} RUB`);
                 }
             }
 

@@ -593,10 +593,9 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
     const ticketId = req.params.id;
     const userId = req.session.user.userId;
     const cancellationDeadline = 120;
+    const EXCHANGE_RATE = 28.00;
 
     try {
-        // ИСПРАВЛЕНИЕ: Ищем payment_metadata через qrtoken, но также пытаемся найти
-        // другие билеты из той же транзакции по yookassa_payment_id
         const checkQuery = `
             SELECT 
                 t.ticketid,
@@ -612,7 +611,6 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
                 pm.yookassa_payment_id,
                 pm.amount,
                 pm.currency,
-                -- Находим ВСЕ билеты из этой транзакции
                 (
                     SELECT json_agg(json_build_object(
                         'ticketid', t2.ticketid,
@@ -643,7 +641,6 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
             return req.session.save(() => res.redirect('/profile/tickets'));
         }
 
-        // Проверка срока отмены
         const startTime = new Date(ticketInfo.starttime);
         const deadline = new Date(startTime.getTime() - cancellationDeadline * 60000);
 
@@ -657,7 +654,6 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
         try {
             await client.query('BEGIN');
 
-            // Парсим sibling_tickets
             let siblingTickets = [];
             try {
                 siblingTickets = JSON.parse(ticketInfo.sibling_tickets) || [];
@@ -665,22 +661,19 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
                 siblingTickets = [];
             }
 
-            // Находим все оплаченные билеты в этой транзакции
             const allPaidTickets = siblingTickets.filter(t => t.status === 'Оплачен');
             const isLastTicket = allPaidTickets.length <= 1;
 
-            // Рассчитываем сумму возврата
-            let refundAmount;
+            let refundAmountRUB;
             if (isLastTicket) {
-                // Если это последний билет, возвращаем всю сумму
-                refundAmount = parseFloat(ticketInfo.amount);
+                refundAmountRUB = parseFloat(ticketInfo.amount);
             } else {
-                // Если есть другие билеты, сумма за этот билет = общая сумма / кол-во билетов
                 const totalAmount = allPaidTickets.reduce((sum, t) => sum + parseFloat(t.amount), 0);
-                refundAmount = totalAmount / allPaidTickets.length;
+                refundAmountRUB = totalAmount / allPaidTickets.length;
             }
 
-            // Обновляем статус билета
+            const refundAmountBYN = refundAmountRUB / EXCHANGE_RATE;
+
             await client.query(`
                 UPDATE tickets
                 SET status = 'Возвращен',
@@ -706,8 +699,8 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
                 ticketId,
                 ticketInfo.payment_id || `payment_${ticketInfo.yookassa_payment_id}`,
                 simulatedRefundId,
-                refundAmount.toFixed(2),
-                ticketInfo.currency || 'RUB',
+                refundAmountRUB.toFixed(2),
+                'RUB',
                 isLastTicket ? 'Полный возврат средств' : 'Частичный возврат при отмене одного билета из нескольких',
                 ticketInfo.yookassa_payment_id
             ]);
@@ -715,8 +708,8 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
             await client.query('COMMIT');
 
             const message = isLastTicket
-                ? `Билет №${ticketId} успешно отменен. Возврат ${refundAmount.toFixed(2)} ${ticketInfo.currency} инициирован.`
-                : `Билет №${ticketId} успешно отменен. Возврат ${refundAmount.toFixed(2)} ${ticketInfo.currency} будет обработан. Остальные ${allPaidTickets.length - 1} билет(ов) остаются действительными.`;
+                ? `✅ Билет №${ticketId} успешно отменен. Возврат ${refundAmountBYN.toFixed(2)} BYN инициирован.`
+                : `✅ Билет №${ticketId} успешно отменен. Возврат ${refundAmountBYN.toFixed(2)} BYN будет обработан. Остальные ${allPaidTickets.length - 1} билет(ов) остаются действительными.`;
 
             req.flash('success', message);
 
@@ -741,11 +734,9 @@ router.post('/ticket/:id/cancel', authMiddleware, async (req, res) => {
 router.post('/telegram/generate-token', async (req, res) => {
     const userId = req.session.user.userId;
 
-    // Генерируем уникальный токен (32 символа)
     const linkToken = crypto.randomBytes(16).toString('hex');
 
     try {
-        // Сохраняем токен, только если Telegram ID еще не установлен
         const updateQuery = `
             UPDATE users
             SET telegramlinktoken = $1
